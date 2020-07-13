@@ -14,7 +14,7 @@ __device__ __constant__ double dev_sigma_rep[3][3] = {
 	{0.0, 5.4, 7.0}
 };
 
-void update_neighbor_list_gpu() {
+void update_neighbor_list() {
 
   double dx, dy, dz;
   double d2;
@@ -131,12 +131,12 @@ void update_neighbor_list_gpu() {
   fflush(stdout);
 }
 
-void update_neighbor_list(){
+void update_neighbor_list_gpu(){
  	// Declare N
 	int N;
 	
 	// Set N
-	N = ncon_att+1;
+	N = ncon_att;
 	
 	// Declare value array
 	int *value;
@@ -145,10 +145,8 @@ void update_neighbor_list(){
 	// Calculate binary list for att
 	calculate_array_native(ibead_lj_nat, jbead_lj_nat, itype_lj_nat, jtype_lj_nat, unc_pos, lj_nat_pdb_dist, value, boxl, N);
 
-    N--;
-
 	// Compact ibead_neighbor_list_att
-	nnl_att = compact(ibead_lj_nat+1, value+1, N, ibead_neighbor_list_att);
+	nnl_att = compact(ibead_lj_nat, value, N, ibead_neighbor_list_att)-1;
     printf("%d\n", nnl_att);
     fflush(stdout);
 
@@ -160,25 +158,25 @@ void update_neighbor_list(){
     exit(0);*/
 	
 	// Compact jbead_neighbor_list_att
-	compact(jbead_lj_nat+1, value+1, N, jbead_neighbor_list_att);
+	compact(jbead_lj_nat, value, N, jbead_neighbor_list_att);
 	
 	// Compact itype_neighbor_list_att
-	compact(itype_lj_nat+1, value+1, N, itype_neighbor_list_att);
+	compact(itype_lj_nat, value, N, itype_neighbor_list_att);
 	
 	// Compact jtype_neighbor_list_att
-	compact(jtype_lj_nat+1, value+1, N, jtype_neighbor_list_att);
+	compact(jtype_lj_nat, value, N, jtype_neighbor_list_att);
 	
 	// Compact nl_lj_nat_pdb_dist
-	compact(lj_nat_pdb_dist+1, value+1, N, nl_lj_nat_pdb_dist);
+	compact(lj_nat_pdb_dist, value, N, nl_lj_nat_pdb_dist);
 	
 	// Compact nl_lj_nat_pdb_dist2
-	compact(lj_nat_pdb_dist2+1, value+1, N, nl_lj_nat_pdb_dist2);
+	compact(lj_nat_pdb_dist2, value, N, nl_lj_nat_pdb_dist2);
 	
 	// Compact nl_lj_nat_pdb_dist6
-	compact(lj_nat_pdb_dist6+1, value+1, N, nl_lj_nat_pdb_dist6);
+	compact(lj_nat_pdb_dist6, value, N, nl_lj_nat_pdb_dist6);
 	
 	// Compact nl_lj_nat_pdb_dist12
-	compact(lj_nat_pdb_dist12+1, value+1, N, nl_lj_nat_pdb_dist12);
+	compact(lj_nat_pdb_dist12, value, N, nl_lj_nat_pdb_dist12);
 	
 	// Free value memory
 	free(value);
@@ -192,29 +190,27 @@ void update_neighbor_list(){
 	
 	
 	// Set N
-	N = ncon_rep+1;
+	N = ncon_rep;
 	
 	// Declare value array
 	value = (int *)malloc(N*sizeof(int));
 	
 	// Calculate binary list for rep
 	calculate_array_non_native(ibead_lj_non_nat, jbead_lj_non_nat, itype_lj_non_nat, jtype_lj_non_nat, unc_pos, value, boxl, N);
-	
-    N--;
 
 	// Compact ibead_neighbor_list_rep
-	nnl_rep = compact(ibead_lj_non_nat+1, value+1, N, ibead_neighbor_list_rep);
+	nnl_rep = compact(ibead_lj_non_nat, value, N, ibead_neighbor_list_rep)-1;
     printf("%d\n", nnl_rep);
     fflush(stdout);
 	
 	// Compact jbead_neighbor_list_rep
-	compact(jbead_lj_non_nat+1, value+1, N, jbead_neighbor_list_rep);
+	compact(jbead_lj_non_nat, value, N, jbead_neighbor_list_rep);
 	
 	// Compact itype_neighbor_list_rep
-	compact(itype_lj_non_nat+1, value+1, N, itype_neighbor_list_rep);
+	compact(itype_lj_non_nat, value, N, itype_neighbor_list_rep);
 	
 	// Compact jtype_neighbor_list_rep
-	compact(itype_lj_non_nat+1, value+1, N, itype_neighbor_list_rep);
+	compact(itype_lj_non_nat, value, N, itype_neighbor_list_rep);
 
     free(value);
 }
@@ -325,7 +321,7 @@ void calculate_array_native(int *ibead_lj_nat, int *jbead_lj_nat, int *itype_lj_
 __global__ void array_native_kernel(int *dev_ibead_lj_nat, int *dev_jbead_lj_nat, int *dev_itype_lj_nat, int *dev_jtype_lj_nat, float3 *dev_unc_pos, double *dev_lj_nat_pdb_dist, 
                             int *dev_value, int boxl, int N){
   int i = blockIdx.x * blockDim.x + threadIdx.x;
-  if(i > 0 && i < N){
+  if(i > 0 && i <= N){
     double dx, dy, dz;
     double d2;
     int ibead, jbead, itype, jtype;
@@ -381,6 +377,8 @@ __global__ void array_native_kernel(int *dev_ibead_lj_nat, int *dev_jbead_lj_nat
     }else{
       dev_value[i] = 0;
     }
+  }else if(i == 0){
+      dev_value[i] = 1;
   }
 }
 
@@ -456,7 +454,7 @@ void calculate_array_non_native(int *ibead_lj_non_nat, int *jbead_lj_non_nat, in
 __global__ void array_non_native_kernel(int *dev_ibead_lj_non_nat, int *dev_jbead_lj_non_nat, int *dev_itype_lj_non_nat, int *dev_jtype_lj_non_nat, 
                                         float3 *dev_unc_pos, int *dev_value, int boxl, int N){
   int i = blockIdx.x * blockDim.x + threadIdx.x;
-  if(i > 0 && i < N){
+  if(i > 0 && i <= N){
     double dx, dy, dz;
     double d2;
     int ibead, jbead, itype, jtype;
@@ -509,6 +507,8 @@ __global__ void array_non_native_kernel(int *dev_ibead_lj_non_nat, int *dev_jbea
     }else{
       dev_value[i] = 0;
     }
+  }else if(i == 0){
+      dev_value[i] = 1;
   }
 }
 
