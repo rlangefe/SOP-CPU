@@ -76,9 +76,6 @@ void update_neighbor_list() {
       nl_lj_nat_pdb_dist12[nnl_att] = lj_nat_pdb_dist12[i];
     }
   }
-  printf("%d\n", nnl_att);
-  fflush(stdout);
-
 
   // calculations for non-native (repulsive) contacts
   for (int i=1; i<=ncon_rep; i++) {
@@ -127,8 +124,6 @@ void update_neighbor_list() {
       jtype_neighbor_list_rep[nnl_rep] = jtype;
     }
   }
-  printf("%d\n", nnl_rep);
-  fflush(stdout);
 }
 
 void update_neighbor_list_gpu(){
@@ -147,15 +142,6 @@ void update_neighbor_list_gpu(){
 
 	// Compact ibead_neighbor_list_att
 	nnl_att = compact(ibead_lj_nat, value, N, ibead_neighbor_list_att)-1;
-    printf("%d\n", nnl_att);
-    fflush(stdout);
-
-    /*
-    for(int i = 0; i < N; i++){
-        printf("%d\n", ibead_neighbor_list_att[i]);
-    }
-    fflush(stdout);
-    exit(0);*/
 	
 	// Compact jbead_neighbor_list_att
 	compact(jbead_lj_nat, value, N, jbead_neighbor_list_att);
@@ -200,8 +186,6 @@ void update_neighbor_list_gpu(){
 
 	// Compact ibead_neighbor_list_rep
 	nnl_rep = compact(ibead_lj_non_nat, value, N, ibead_neighbor_list_rep)-1;
-    printf("%d\n", nnl_rep);
-    fflush(stdout);
 	
 	// Compact jbead_neighbor_list_rep
 	compact(jbead_lj_non_nat, value, N, jbead_neighbor_list_rep);
