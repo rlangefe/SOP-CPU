@@ -20,12 +20,21 @@ void calculate_array_native(int *ibead_lj_nat, int *jbead_lj_nat, int *itype_lj_
 __global__ void array_native_kernel(int *dev_ibead_lj_nat, int *dev_jbead_lj_nat, int *dev_itype_lj_nat, int *dev_jtype_lj_nat, float3 *dev_unc_pos, double *dev_lj_nat_pdb_dist, int *dev_value, int boxl, int N);
 
 void calculate_array_non_native(int *ibead_lj_nat, int *jbead_lj_nat, int *itype_lj_nat, int *jtype_lj_nat, float3 *unc_pos, int *value, int boxl, int N);
-__global__ void array_non_native_kernel(int *dev_ibead_lj_nat, int *dev_jbead_lj_nat, int *dev_itype_lj_nat, int *dev_jtype_lj_nat, float3 *dev_unc_pos, int *dev_value, int boxl, int N);
+__global__ void array_non_native_kernel(int *dev_ibead_lj_non_nat, int *dev_jbead_lj_non_nat, int *dev_itype_lj_non_nat, int *dev_jtype_lj_non_nat, float3 *dev_unc_pos, int *dev_value, int boxl, int N);
 
 void hier_ks_scan(int *dev_X, int *dev_Y, int N, int re);
 int compact(int *index, int *value, int N, int *&result);
 int compact(double *index, int *value, int N, double *&result);
 
-__global__ void dummy(int *dev_ibead_lj_nat, int *dev_jbead_lj_nat, int *dev_itype_lj_nat, int *dev_jtype_lj_nat, float3 *dev_unc_pos, double *dev_lj_nat_pdb_dist, int *&dev_value, int boxl, int N, int nbead);
+int compact_non_native(int *ibead_lj_non_nat, int *jbead_lj_non_nat, int *itype_lj_non_nat, int *jtype_lj_non_nat, int *value, int N, 
+                    int *&ibead_neighbor_list_rep, int *&jbead_neighbor_list_rep, int *&itype_neighbor_list_rep, int *&jtype_neighbor_list_rep);
+
+int compact_native(int *ibead_lj_nat, int *jbead_lj_nat, int *itype_lj_nat, int *jtype_lj_nat, double *lj_nat_pdb_dist,
+                    double *lj_nat_pdb_dist2, double *lj_nat_pdb_dist6, double *lj_nat_pdb_dist12, int *value, int N, 
+                    int *&ibead_neighbor_list_att, int *&jbead_neighbor_list_att, int *&itype_neighbor_list_att,
+                    int *&jtype_neighbor_list_att, double *&nl_lj_nat_pdb_dist, double *&nl_lj_nat_pdb_dist2,
+                    double *&nl_lj_nat_pdb_dist6, double *&nl_lj_nat_pdb_dist12);
+
+//__global__ void dummy(int *dev_ibead_lj_nat, int *dev_jbead_lj_nat, int *dev_itype_lj_nat, int *dev_jtype_lj_nat, float3 *dev_unc_pos, double *dev_lj_nat_pdb_dist, int *&dev_value, int boxl, int N, int nbead);
 
 #endif

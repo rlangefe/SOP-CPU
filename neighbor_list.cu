@@ -14,7 +14,7 @@ __device__ __constant__ double dev_sigma_rep[3][3] = {
 	{0.0, 5.4, 7.0}
 };
 
-void update_neighbor_list() {
+void update_neighbor_list_gpu() {
 
   double dx, dy, dz;
   double d2;
@@ -126,7 +126,7 @@ void update_neighbor_list() {
   }
 }
 
-void update_neighbor_list_gpu(){
+void update_neighbor_list(){
  	// Declare N
 	int N;
 	
@@ -139,7 +139,7 @@ void update_neighbor_list_gpu(){
 	
 	// Calculate binary list for att
 	calculate_array_native(ibead_lj_nat, jbead_lj_nat, itype_lj_nat, jtype_lj_nat, unc_pos, lj_nat_pdb_dist, value, boxl, N);
-
+    /*
 	// Compact ibead_neighbor_list_att
 	nnl_att = compact(ibead_lj_nat, value, N, ibead_neighbor_list_att)-1;
 	
@@ -162,7 +162,14 @@ void update_neighbor_list_gpu(){
 	compact(lj_nat_pdb_dist6, value, N, nl_lj_nat_pdb_dist6);
 	
 	// Compact nl_lj_nat_pdb_dist12
-	compact(lj_nat_pdb_dist12, value, N, nl_lj_nat_pdb_dist12);
+	compact(lj_nat_pdb_dist12, value, N, nl_lj_nat_pdb_dist12);*/
+
+    nnl_att = compact_native(ibead_lj_nat, jbead_lj_nat, itype_lj_nat, jtype_lj_nat, lj_nat_pdb_dist, lj_nat_pdb_dist2, lj_nat_pdb_dist6, lj_nat_pdb_dist12, value, N, 
+                    ibead_neighbor_list_att, jbead_neighbor_list_att, itype_neighbor_list_att, jtype_neighbor_list_att, nl_lj_nat_pdb_dist, nl_lj_nat_pdb_dist2,
+                    nl_lj_nat_pdb_dist6, nl_lj_nat_pdb_dist12) - 1;
+    
+    printf("Native: %d\n", nnl_att);
+    fflush(stdout);
 	
 	// Free value memory
 	free(value);
@@ -194,7 +201,13 @@ void update_neighbor_list_gpu(){
 	compact(itype_lj_non_nat, value, N, itype_neighbor_list_rep);
 	
 	// Compact jtype_neighbor_list_rep
-	compact(itype_lj_non_nat, value, N, itype_neighbor_list_rep);
+	compact(jtype_lj_non_nat, value, N, jtype_neighbor_list_rep);
+    
+    nnl_rep = compact_non_native(ibead_lj_non_nat, jbead_lj_non_nat, itype_lj_non_nat, jtype_lj_non_nat, value, N, 
+                    ibead_neighbor_list_rep, jbead_neighbor_list_rep, itype_neighbor_list_rep, jtype_neighbor_list_rep) - 1;
+    
+    printf("Non-Native: %d\n", nnl_rep);
+    fflush(stdout);
 
     free(value);
 }
@@ -948,3 +961,316 @@ __global__ void dummy(int *dev_ibead_lj_nat, int *dev_jbead_lj_nat, int *dev_ity
   }
 }
 */
+
+
+int compact_native(int *ibead_lj_nat, int *jbead_lj_nat, int *itype_lj_nat, int *jtype_lj_nat, double *lj_nat_pdb_dist,
+                    double *lj_nat_pdb_dist2, double *lj_nat_pdb_dist6, double *lj_nat_pdb_dist12, int *value, int N, 
+                    int *&ibead_neighbor_list_att, int *&jbead_neighbor_list_att, int *&itype_neighbor_list_att,
+                    int *&jtype_neighbor_list_att, double *&nl_lj_nat_pdb_dist, double *&nl_lj_nat_pdb_dist2,
+                    double *&nl_lj_nat_pdb_dist6, double *&nl_lj_nat_pdb_dist12){
+    // Declare pointers for dev_output and dev_value arrays
+    int *dev_output;
+    int *dev_value;
+
+    // Calculate array size
+    int size = N * sizeof(int);
+
+    // Allocate dev_value and dev_output arrays
+    cudaMalloc((void**)&dev_value, size);
+    cudaMalloc((void**)&dev_output, size);
+ 
+    // Copy data from value array to device (dev_value)
+    cudaMemcpy(dev_value, value, size, cudaMemcpyHostToDevice);
+
+    // Perform hierarchical Kogge-Stone scan on dev_value array and store result in dev_output
+    hier_ks_scan(dev_value, dev_output, N, 0);
+
+    // Copy size of compacted array from device to host and store in arrSize
+    int arrSize;
+    cudaMemcpy(&arrSize, &dev_output[N-1], sizeof(int), cudaMemcpyDeviceToHost); 
+
+    // Increment arrSize by 1 if needed
+    if(value[N-1]){
+        arrSize++;
+    }
+
+    int threads = (int)min(N, SECTION_SIZE);
+    int blocks = (int)ceil(1.0*N/SECTION_SIZE);
+
+    // Declare and allocate dev_result array to store compacted indices on device (on GPU)
+    int *dev_ibead_lj_nat;
+    cudaMalloc((void**)&dev_ibead_lj_nat, N*sizeof(int));
+    cudaMemcpy(dev_ibead_lj_nat, ibead_lj_nat, N*sizeof(int), cudaMemcpyHostToDevice);
+    int *dev_ibead_neighbor_list_att;
+    cudaMalloc((void**)&dev_ibead_neighbor_list_att, arrSize*sizeof(int));
+
+    copyElements<<<blocks, threads>>>(dev_ibead_lj_nat, dev_value, dev_output, dev_ibead_neighbor_list_att, N);
+    cudaDeviceSynchronize();
+    free(ibead_neighbor_list_att);
+    ibead_neighbor_list_att = (int *)malloc(arrSize*sizeof(int));
+    cudaMemcpy(ibead_neighbor_list_att, dev_ibead_neighbor_list_att, arrSize*sizeof(int), cudaMemcpyDeviceToHost);
+
+    cudaDeviceSynchronize();
+    cudaFree(dev_ibead_lj_nat);
+    cudaFree(dev_ibead_neighbor_list_att);
+
+    cudaDeviceSynchronize();
+    
+    int *dev_jbead_lj_nat;
+    cudaMalloc((void**)&dev_jbead_lj_nat, N*sizeof(int));
+    cudaMemcpy(dev_jbead_lj_nat, jbead_lj_nat, N*sizeof(int), cudaMemcpyHostToDevice);
+    int *dev_jbead_neighbor_list_att;
+    cudaMalloc((void**)&dev_jbead_neighbor_list_att, arrSize*sizeof(int));
+
+    copyElements<<<blocks, threads>>>(dev_jbead_lj_nat, dev_value, dev_output, dev_jbead_neighbor_list_att, N);
+    cudaDeviceSynchronize();
+    free(jbead_neighbor_list_att);
+    jbead_neighbor_list_att = (int *)malloc(arrSize*sizeof(int));
+    cudaMemcpy(jbead_neighbor_list_att, dev_jbead_neighbor_list_att, arrSize*sizeof(int), cudaMemcpyDeviceToHost); 
+
+    cudaDeviceSynchronize();
+    cudaFree(dev_jbead_lj_nat);
+    cudaFree(dev_jbead_neighbor_list_att);
+
+    cudaDeviceSynchronize();
+
+    int *dev_itype_lj_nat;
+    cudaMalloc((void**)&dev_itype_lj_nat, N*sizeof(int));
+    cudaMemcpy(dev_itype_lj_nat, itype_lj_nat, N*sizeof(int), cudaMemcpyHostToDevice);
+    int *dev_itype_neighbor_list_att;
+    cudaMalloc((void**)&dev_itype_neighbor_list_att, arrSize*sizeof(int));
+
+    copyElements<<<blocks, threads>>>(dev_itype_lj_nat, dev_value, dev_output, dev_itype_neighbor_list_att, N);
+    cudaDeviceSynchronize();
+    free(itype_neighbor_list_att);
+    itype_neighbor_list_att = (int *)malloc(arrSize*sizeof(int));
+    cudaMemcpy(itype_neighbor_list_att, dev_itype_neighbor_list_att, arrSize*sizeof(int), cudaMemcpyDeviceToHost); 
+
+    cudaDeviceSynchronize();
+    cudaFree(dev_itype_lj_nat);
+    cudaFree(dev_itype_neighbor_list_att);
+
+    cudaDeviceSynchronize();
+
+
+    int *dev_jtype_lj_nat;
+    cudaMalloc((void**)&dev_jtype_lj_nat, N*sizeof(int));
+    cudaMemcpy(dev_jtype_lj_nat, jtype_lj_nat, N*sizeof(int), cudaMemcpyHostToDevice);
+    int *dev_jtype_neighbor_list_att;
+    cudaMalloc((void**)&dev_jtype_neighbor_list_att, arrSize*sizeof(int));
+
+    copyElements<<<blocks, threads>>>(dev_jtype_lj_nat, dev_value, dev_output, dev_jtype_neighbor_list_att, N);
+    cudaDeviceSynchronize();
+    free(jtype_neighbor_list_att);
+    jtype_neighbor_list_att = (int *)malloc(arrSize*sizeof(int));
+    cudaMemcpy(jtype_neighbor_list_att, dev_jtype_neighbor_list_att, arrSize*sizeof(int), cudaMemcpyDeviceToHost); 
+
+    cudaDeviceSynchronize();
+    cudaFree(dev_jtype_lj_nat);
+    cudaFree(dev_jtype_neighbor_list_att);
+
+    cudaDeviceSynchronize();
+
+    double *dev_lj_nat_pdb_dist;
+    cudaMalloc((void**)&dev_lj_nat_pdb_dist, N*sizeof(double));
+    cudaMemcpy(dev_lj_nat_pdb_dist, lj_nat_pdb_dist, N*sizeof(double), cudaMemcpyHostToDevice);
+    double *dev_nl_lj_nat_pdb_dist;
+    cudaMalloc((void**)&dev_nl_lj_nat_pdb_dist, arrSize*sizeof(double));
+
+    copyElements<<<blocks, threads>>>(dev_lj_nat_pdb_dist, dev_value, dev_output, dev_nl_lj_nat_pdb_dist, N);
+    cudaDeviceSynchronize();
+    free(nl_lj_nat_pdb_dist);
+    nl_lj_nat_pdb_dist = (double *)malloc(arrSize*sizeof(double));
+    cudaMemcpy(nl_lj_nat_pdb_dist, dev_nl_lj_nat_pdb_dist, arrSize*sizeof(double), cudaMemcpyDeviceToHost); 
+
+    cudaDeviceSynchronize();
+    cudaFree(dev_lj_nat_pdb_dist);
+    cudaFree(dev_nl_lj_nat_pdb_dist);
+
+    cudaDeviceSynchronize();
+
+
+    double *dev_lj_nat_pdb_dist2;
+    cudaMalloc((void**)&dev_lj_nat_pdb_dist2, N*sizeof(double));
+    cudaMemcpy(dev_lj_nat_pdb_dist2, lj_nat_pdb_dist2, N*sizeof(double), cudaMemcpyHostToDevice);
+    double *dev_nl_lj_nat_pdb_dist2;
+    cudaMalloc((void**)&dev_nl_lj_nat_pdb_dist2, arrSize*sizeof(double));
+
+    copyElements<<<blocks, threads>>>(dev_lj_nat_pdb_dist2, dev_value, dev_output, dev_nl_lj_nat_pdb_dist2, N);
+    cudaDeviceSynchronize();
+    free(nl_lj_nat_pdb_dist2);
+    nl_lj_nat_pdb_dist2 = (double *)malloc(arrSize*sizeof(double));
+    cudaMemcpy(nl_lj_nat_pdb_dist2, dev_nl_lj_nat_pdb_dist2, arrSize*sizeof(double), cudaMemcpyDeviceToHost); 
+
+    cudaDeviceSynchronize();
+    cudaFree(dev_lj_nat_pdb_dist2);
+    cudaFree(dev_nl_lj_nat_pdb_dist2);
+
+    cudaDeviceSynchronize();
+    
+
+    double *dev_lj_nat_pdb_dist6;
+    cudaMalloc((void**)&dev_lj_nat_pdb_dist6, N*sizeof(double));
+    cudaMemcpy(dev_lj_nat_pdb_dist6, lj_nat_pdb_dist6, N*sizeof(double), cudaMemcpyHostToDevice);
+    double *dev_nl_lj_nat_pdb_dist6;
+    cudaMalloc((void**)&dev_nl_lj_nat_pdb_dist6, arrSize*sizeof(double));
+
+    copyElements<<<blocks, threads>>>(dev_lj_nat_pdb_dist6, dev_value, dev_output, dev_nl_lj_nat_pdb_dist6, N);
+    cudaDeviceSynchronize();
+    free(nl_lj_nat_pdb_dist6);
+    nl_lj_nat_pdb_dist6 = (double *)malloc(arrSize*sizeof(double));
+    cudaMemcpy(nl_lj_nat_pdb_dist6, dev_nl_lj_nat_pdb_dist6, arrSize*sizeof(double), cudaMemcpyDeviceToHost);
+
+    cudaDeviceSynchronize();
+    cudaFree(dev_lj_nat_pdb_dist6);
+    cudaFree(dev_nl_lj_nat_pdb_dist6);
+
+    cudaDeviceSynchronize();
+
+
+    double *dev_lj_nat_pdb_dist12;
+    cudaMalloc((void**)&dev_lj_nat_pdb_dist12, N*sizeof(double));
+    cudaMemcpy(dev_lj_nat_pdb_dist12, dev_lj_nat_pdb_dist12, N*sizeof(double), cudaMemcpyHostToDevice);
+    double *dev_nl_lj_nat_pdb_dist12;
+    cudaMalloc((void**)&dev_nl_lj_nat_pdb_dist12, arrSize*sizeof(double));
+
+    copyElements<<<blocks, threads>>>(dev_lj_nat_pdb_dist12, dev_value, dev_output, dev_nl_lj_nat_pdb_dist12, N);
+    cudaDeviceSynchronize();
+    free(nl_lj_nat_pdb_dist12);
+    nl_lj_nat_pdb_dist12 = (double *)malloc(arrSize*sizeof(double));
+    cudaMemcpy(nl_lj_nat_pdb_dist12, dev_nl_lj_nat_pdb_dist12, arrSize*sizeof(double), cudaMemcpyDeviceToHost); 
+
+    cudaDeviceSynchronize();
+    cudaFree(dev_lj_nat_pdb_dist12);
+    cudaFree(dev_nl_lj_nat_pdb_dist12);
+
+    cudaDeviceSynchronize();
+
+    cudaFree(dev_value);
+    cudaFree(dev_output);
+
+    return arrSize;
+}
+
+
+int compact_non_native(int *ibead_lj_non_nat, int *jbead_lj_non_nat, int *itype_lj_non_nat, int *jtype_lj_non_nat, int *value, int N, 
+                    int *&ibead_neighbor_list_rep, int *&jbead_neighbor_list_rep, int *&itype_neighbor_list_rep, int *&jtype_neighbor_list_rep){
+    // Declare pointers for dev_output and dev_value arrays
+    int *dev_output;
+    int *dev_value;
+
+    // Calculate array size
+    int size = N * sizeof(int);
+
+    // Allocate dev_value and dev_output arrays
+    cudaMalloc((void**)&dev_value, size);
+    cudaMalloc((void**)&dev_output, size);
+ 
+    // Copy data from value array to device (dev_value)
+    cudaMemcpy(dev_value, value, size, cudaMemcpyHostToDevice);
+
+    // Perform hierarchical Kogge-Stone scan on dev_value array and store result in dev_output
+    hier_ks_scan(dev_value, dev_output, N, 0);
+
+    // Copy size of compacted array from device to host and store in arrSize
+    /* 
+     * TODO: If the entire array has 1 as the value, an exclusive scan will have N-1 as the last value in the array.
+     * However, allocating an array with N-1 entries will not store all N values from the index array.
+     * Change code to determine when we need to increment arrSize and when we don't.
+     * Options include:
+     *  1) Changing the hierarchical scan kernel to determine if the final value in the value array is 1
+     *  2) Checking to see if the final value is 1 in the value array
+     * Option 2 was selected, but please double-check this approach
+     */ 
+    int arrSize;
+    cudaMemcpy(&arrSize, &dev_output[N-1], sizeof(int), cudaMemcpyDeviceToHost); 
+
+    // Increment arrSize by 1 if needed
+    if(value[N-1]){
+        arrSize++;
+    }
+
+    int threads = (int)min(N, SECTION_SIZE);
+    int blocks = (int)ceil(1.0*N/SECTION_SIZE);
+
+    // Declare and allocate dev_result array to store compacted indices on device (on GPU)
+    int *dev_ibead_lj_non_nat;
+    cudaMalloc((void**)&dev_ibead_lj_non_nat, N*sizeof(int));
+    cudaMemcpy(dev_ibead_lj_non_nat, ibead_lj_non_nat, N*sizeof(int), cudaMemcpyHostToDevice);
+    int *dev_ibead_neighbor_list_rep;
+    cudaMalloc((void**)&dev_ibead_neighbor_list_rep, arrSize*sizeof(int));
+
+    copyElements<<<blocks, threads>>>(dev_ibead_lj_non_nat, dev_value, dev_output, dev_ibead_neighbor_list_rep, N);
+    cudaDeviceSynchronize();
+    free(ibead_neighbor_list_rep);
+    ibead_neighbor_list_rep = (int *)malloc(arrSize*sizeof(int));
+    cudaMemcpy(ibead_neighbor_list_rep, dev_ibead_neighbor_list_rep, arrSize*sizeof(int), cudaMemcpyDeviceToHost);
+
+    cudaDeviceSynchronize();
+    cudaFree(dev_ibead_lj_non_nat);
+    cudaFree(dev_ibead_neighbor_list_rep);
+
+    cudaDeviceSynchronize();
+
+    
+    int *dev_jbead_lj_non_nat;
+    cudaMalloc((void**)&dev_jbead_lj_non_nat, N*sizeof(int));
+    cudaMemcpy(dev_jbead_lj_non_nat, jbead_lj_non_nat, N*sizeof(int), cudaMemcpyHostToDevice);
+    int *dev_jbead_neighbor_list_rep;
+    cudaMalloc((void**)&dev_jbead_neighbor_list_rep, arrSize*sizeof(int));
+
+    copyElements<<<blocks, threads>>>(dev_jbead_lj_non_nat, dev_value, dev_output, dev_jbead_neighbor_list_rep, N);
+    cudaDeviceSynchronize();
+    free(jbead_neighbor_list_rep);
+    jbead_neighbor_list_rep = (int *)malloc(arrSize*sizeof(int));
+    cudaMemcpy(jbead_neighbor_list_rep, dev_jbead_neighbor_list_rep, arrSize*sizeof(int), cudaMemcpyDeviceToHost); 
+
+    cudaDeviceSynchronize();
+    cudaFree(dev_jbead_lj_non_nat);
+    cudaFree(dev_jbead_neighbor_list_rep);
+
+    cudaDeviceSynchronize();
+
+
+    int *dev_itype_lj_non_nat;
+    cudaMalloc((void**)&dev_itype_lj_non_nat, N*sizeof(int));
+    cudaMemcpy(dev_itype_lj_non_nat, itype_lj_non_nat, N*sizeof(int), cudaMemcpyHostToDevice);
+    int *dev_itype_neighbor_list_rep;
+    cudaMalloc((void**)&dev_itype_neighbor_list_rep, arrSize*sizeof(int));
+
+    copyElements<<<blocks, threads>>>(dev_itype_lj_non_nat, dev_value, dev_output, dev_itype_neighbor_list_rep, N);
+    cudaDeviceSynchronize();
+    free(itype_neighbor_list_rep);
+    itype_neighbor_list_rep = (int *)malloc(arrSize*sizeof(int));
+    cudaMemcpy(itype_neighbor_list_rep, dev_itype_neighbor_list_rep, arrSize*sizeof(int), cudaMemcpyDeviceToHost); 
+
+    cudaDeviceSynchronize();
+    cudaFree(dev_itype_lj_non_nat);
+    cudaFree(dev_itype_neighbor_list_rep);
+
+    cudaDeviceSynchronize();
+
+
+    int *dev_jtype_lj_non_nat;
+    cudaMalloc((void**)&dev_jtype_lj_non_nat, N*sizeof(int));
+    cudaMemcpy(dev_jtype_lj_non_nat, jtype_lj_non_nat, N*sizeof(int), cudaMemcpyHostToDevice);
+    int *dev_jtype_neighbor_list_rep;
+    cudaMalloc((void**)&dev_jtype_neighbor_list_rep, arrSize*sizeof(int));
+
+    copyElements<<<blocks, threads>>>(dev_jtype_lj_non_nat, dev_value, dev_output, dev_jtype_neighbor_list_rep, N);
+    cudaDeviceSynchronize();
+    free(jtype_neighbor_list_rep);
+    jtype_neighbor_list_rep = (int *)malloc(arrSize*sizeof(int));
+    cudaMemcpy(jtype_neighbor_list_rep, dev_jtype_neighbor_list_rep, arrSize*sizeof(int), cudaMemcpyDeviceToHost); 
+
+    cudaDeviceSynchronize();
+    cudaFree(dev_jtype_lj_non_nat);
+    cudaFree(dev_jtype_neighbor_list_rep);
+
+    cudaDeviceSynchronize();
+
+    cudaFree(dev_value);
+    cudaFree(dev_output);
+
+    return arrSize;
+}
