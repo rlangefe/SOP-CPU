@@ -19,6 +19,8 @@ char cmd[mcmd+1][mwdsize];
 char opt[mopt_tot+1][mwdsize];
 int opt_ptr[mcmd+1];
 char pathname[MAXPATHLEN];
+char nl_algorithm[30];
+char pl_algorithm[30];
 
 // bonded info
 double k_bnd; // bond spring constant
@@ -142,10 +144,10 @@ int lj_rna_rna_allocated = 0;
 // coordinates and associated params
 
 int nbead;
-float3* pos;
-float3* unc_pos; // uncorrected positions
-float3* vel;
-float3* force;
+double3* pos;
+double3* unc_pos; // uncorrected positions
+double3* vel;
+double3* force;
 int pos_allocated = 0;
 int vel_allocated = 0;
 int force_allocated = 0;
@@ -166,6 +168,9 @@ int restart = 0; // default is to start a new simulation
 int rgen_restart = 0; // default don't restart random number generator
 int sim_type = 1; // integration scheme; default is underdamped
 double T; // temperature
+int usegpu_nl = 0;
+int usegpu_pl = 0;
+int usegpu_vdw = 0;
 int neighborlist = 0; // neighbor list cutoff method?
 int celllist = 0; // cell list cutoff method?
 double boxl; // Length of an edge of the simulation box

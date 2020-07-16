@@ -24,6 +24,8 @@ extern int opt_ptr[]; // holds index of first option correspond to given cmd
 extern int ncmd; // number of input commands
 extern int nopt_tot; // total # of options
 extern char pathname[];
+extern char nl_algorithm[];
+extern char pl_algorithm[];
 
 // bonded info
 extern double k_bnd;
@@ -130,11 +132,11 @@ extern double e_vdw_rr_rep;
 extern int nbead;
 extern int ncrowder;
 extern int nbead_tot;
-extern float3* pos;
-extern float3* unc_pos;
-extern float3* vel;
-extern float3* force;
-extern float3* natpos; // native position vectors
+extern double3* pos;
+extern double3* unc_pos;
+extern double3* vel;
+extern double3* force;
+extern double3* natpos; // native position vectors
 extern int pos_allocated;
 extern int unc_pos_allocated;
 extern int vel_allocated;
@@ -149,6 +151,9 @@ extern int restart; // are we restarting an old simulation?
 extern int rgen_restart; // should we restart the random number generator?
 extern int sim_type; // integration scheme 1 = underdamped; 2 = overdamped
 extern double T; // temperature (kcal/mol)
+extern int usegpu_nl;
+extern int usegpu_pl;
+extern int usegpu_vdw;
 extern int neighborlist; // neighbor list cutoff method?
 extern int celllist; // cell list cutoff method?
 extern double minT; // minimum temperature determines crowder cutoffs

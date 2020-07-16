@@ -5,6 +5,11 @@
 #include <vector_types.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <thrust/device_vector.h>
+#include <thrust/host_vector.h>
+#include <thrust/copy.h>
+#include <thrust/scan.h>
+#include <thrust/sort.h>
 
 #define SECTION_SIZE 1024
 
@@ -14,7 +19,193 @@ __device__ __constant__ double dev_sigma_rep[3][3] = {
 	{0.0, 5.4, 7.0}
 };
 
-void update_neighbor_list_gpu() {
+void update_neighbor_list_CL(){
+    int N;
+    int *value;
+
+    N = ncon_att;
+    
+    value = (int *)malloc(N*sizeof(int));
+
+    calculate_array_native(ibead_lj_nat, jbead_lj_nat, itype_lj_nat, jtype_lj_nat, unc_pos, lj_nat_pdb_dist, value, boxl, N);
+
+    compact_native_CL(value);
+
+    free(value);
+
+    N = ncon_rep;
+    
+    value = (int *)malloc(N*sizeof(int));
+
+    calculate_array_non_native(ibead_lj_non_nat, jbead_lj_non_nat, itype_lj_non_nat, jtype_lj_non_nat, unc_pos, value, boxl, N);
+
+    compact_non_native_CL(value);
+
+    free(value);
+
+}
+
+void compact_native_CL(int *value){
+    int N;
+    
+    N = ncon_att;
+
+    // typedef these iterators for shorthand
+    typedef thrust::device_vector<int>::iterator   IntIterator;
+    typedef thrust::device_vector<double>::iterator DoubleIterator;
+
+    // typedef a tuple of these iterators
+    typedef thrust::tuple<IntIterator, IntIterator, IntIterator, IntIterator, DoubleIterator, DoubleIterator, DoubleIterator, DoubleIterator> IteratorTuple;
+    typedef thrust::tuple<int *, int *, int *, int *, double *, double *, double *, double *> HostIteratorTuple;
+
+    // typedef the zip_iterator of this tuple
+    typedef thrust::zip_iterator<IteratorTuple> ZipIterator;
+    typedef thrust::zip_iterator<HostIteratorTuple> HostZipIterator;
+
+    // Create device initial vectors
+    thrust::device_vector<int> dev_ibead_lj_nat(ibead_lj_nat, ibead_lj_nat+N);
+    thrust::device_vector<int> dev_jbead_lj_nat(jbead_lj_nat, jbead_lj_nat+N);
+    thrust::device_vector<int> dev_itype_lj_nat(itype_lj_nat, itype_lj_nat+N);
+    thrust::device_vector<int> dev_jtype_lj_nat(jtype_lj_nat, jtype_lj_nat+N);
+    thrust::device_vector<double> dev_lj_nat_pdb_dist(lj_nat_pdb_dist, lj_nat_pdb_dist+N);
+    thrust::device_vector<double> dev_lj_nat_pdb_dist2(lj_nat_pdb_dist2, lj_nat_pdb_dist2+N);
+    thrust::device_vector<double> dev_lj_nat_pdb_dist6(lj_nat_pdb_dist6, lj_nat_pdb_dist6+N);
+    thrust::device_vector<double> dev_lj_nat_pdb_dist12(lj_nat_pdb_dist12, lj_nat_pdb_dist12+N);
+
+    // Create device value vector
+    thrust::device_vector<int> dev_value(value, value+N);
+
+    // Create result vectors
+    thrust::device_vector<int> dev_ibead_neighbor_list_att(N);
+    thrust::device_vector<int> dev_jbead_neighbor_list_att(N);
+    thrust::device_vector<int> dev_itype_neighbor_list_att(N);
+    thrust::device_vector<int> dev_jtype_neighbor_list_att(N);
+    thrust::device_vector<double> dev_nl_lj_nat_pdb_dist(N);
+    thrust::device_vector<double> dev_nl_lj_nat_pdb_dist2(N);
+    thrust::device_vector<double> dev_nl_lj_nat_pdb_dist6(N);
+    thrust::device_vector<double> dev_nl_lj_nat_pdb_dist12(N);
+
+    ZipIterator dev_initial_begin(thrust::make_tuple(dev_ibead_lj_nat.begin(), dev_jbead_lj_nat.begin(), dev_itype_lj_nat.begin(), dev_jtype_lj_nat.begin(),
+                                            dev_lj_nat_pdb_dist.begin(), dev_lj_nat_pdb_dist2.begin(), dev_lj_nat_pdb_dist6.begin(), dev_lj_nat_pdb_dist12.begin()));
+                                            
+    ZipIterator dev_initial_end(thrust::make_tuple(dev_ibead_lj_nat.end(), dev_jbead_lj_nat.end(), dev_itype_lj_nat.end(), dev_jtype_lj_nat.end(),
+                                            dev_lj_nat_pdb_dist.end(), dev_lj_nat_pdb_dist2.end(), dev_lj_nat_pdb_dist6.end(), dev_lj_nat_pdb_dist12.end()));
+
+    ZipIterator dev_result_begin(thrust::make_tuple(dev_ibead_neighbor_list_att.begin(), dev_jbead_neighbor_list_att.begin(), dev_itype_neighbor_list_att.begin(),
+                                            dev_jtype_neighbor_list_att.begin(), dev_nl_lj_nat_pdb_dist.begin(), dev_nl_lj_nat_pdb_dist2.begin(), 
+                                            dev_nl_lj_nat_pdb_dist6.begin(), dev_nl_lj_nat_pdb_dist12.begin()));
+
+    thrust::sort_by_key(dev_value.begin(), dev_value.end(), dev_initial_begin, thrust::greater<int>());
+
+    thrust::inclusive_scan(dev_value.begin(), dev_value.end(), dev_value.begin(), thrust::plus<int>());
+
+    int arrSize;
+
+    thrust::copy(dev_value.end()-1, dev_value.end(), &arrSize);
+
+    nnl_att = arrSize;
+
+    free(ibead_neighbor_list_att);
+    free(jbead_neighbor_list_att);
+    free(itype_neighbor_list_att);
+    free(jtype_neighbor_list_att);
+    free(nl_lj_nat_pdb_dist);
+    free(nl_lj_nat_pdb_dist2);
+    free(nl_lj_nat_pdb_dist6);
+    free(nl_lj_nat_pdb_dist12);
+
+    ibead_neighbor_list_att = (int *)malloc(nnl_att*sizeof(int));
+    jbead_neighbor_list_att = (int *)malloc(nnl_att*sizeof(int));
+    itype_neighbor_list_att = (int *)malloc(nnl_att*sizeof(int));
+    jtype_neighbor_list_att = (int *)malloc(nnl_att*sizeof(int));
+    nl_lj_nat_pdb_dist = (double *)malloc(nnl_att*sizeof(double));
+    nl_lj_nat_pdb_dist2 = (double *)malloc(nnl_att*sizeof(double));
+    nl_lj_nat_pdb_dist6 = (double *)malloc(nnl_att*sizeof(double));
+    nl_lj_nat_pdb_dist12 = (double *)malloc(nnl_att*sizeof(double));
+
+    HostZipIterator host_result_begin(thrust::make_tuple(ibead_neighbor_list_att, jbead_neighbor_list_att, itype_neighbor_list_att,
+                                            jtype_neighbor_list_att, nl_lj_nat_pdb_dist, nl_lj_nat_pdb_dist2, nl_lj_nat_pdb_dist6, nl_lj_nat_pdb_dist12));
+
+    ZipIterator dev_result_end(thrust::make_tuple(dev_ibead_neighbor_list_att.begin() + nnl_att, dev_jbead_neighbor_list_att.begin() + nnl_att,
+                                                dev_itype_neighbor_list_att.begin() + nnl_att, dev_jtype_neighbor_list_att.begin() + nnl_att, 
+                                                dev_nl_lj_nat_pdb_dist.begin() + nnl_att, dev_nl_lj_nat_pdb_dist2.begin() + nnl_att, 
+                                                dev_nl_lj_nat_pdb_dist6.begin() + nnl_att, dev_nl_lj_nat_pdb_dist12.begin() + nnl_att));
+
+    thrust::copy(dev_initial_begin, dev_initial_begin + arrSize, host_result_begin);
+
+    nnl_att--;
+}
+
+void compact_non_native_CL(int *value){
+    int N;
+
+    N = ncon_rep;
+
+    // typedef these iterators for shorthand
+    typedef thrust::device_vector<int>::iterator   IntIterator;
+    typedef thrust::device_vector<double>::iterator DoubleIterator;
+
+    // typedef a tuple of these iterators
+    typedef thrust::tuple<IntIterator, IntIterator, IntIterator, IntIterator> IteratorTuple;
+    typedef thrust::tuple<int *, int *, int *, int *> HostIteratorTuple;
+
+    // typedef the zip_iterator of this tuple
+    typedef thrust::zip_iterator<IteratorTuple> ZipIterator;
+    typedef thrust::zip_iterator<HostIteratorTuple> HostZipIterator;
+
+    // Create device initial vectors
+    thrust::device_vector<int> dev_ibead_lj_non_nat(ibead_lj_non_nat, ibead_lj_non_nat+N);
+    thrust::device_vector<int> dev_jbead_lj_non_nat(jbead_lj_non_nat, jbead_lj_non_nat+N);
+    thrust::device_vector<int> dev_itype_lj_non_nat(itype_lj_non_nat, itype_lj_non_nat+N);
+    thrust::device_vector<int> dev_jtype_lj_non_nat(jtype_lj_non_nat, jtype_lj_non_nat+N);
+
+    // Create device value vector
+    thrust::device_vector<int> dev_value(value, value+N);
+
+    // Create result vectors
+    thrust::device_vector<int> dev_ibead_neighbor_list_rep(N);
+    thrust::device_vector<int> dev_jbead_neighbor_list_rep(N);
+    thrust::device_vector<int> dev_itype_neighbor_list_rep(N);
+    thrust::device_vector<int> dev_jtype_neighbor_list_rep(N);
+
+    ZipIterator dev_initial_begin(thrust::make_tuple(dev_ibead_lj_non_nat.begin(), dev_jbead_lj_non_nat.begin(), dev_itype_lj_non_nat.begin(), dev_jtype_lj_non_nat.begin()));
+                                            
+    ZipIterator dev_initial_end(thrust::make_tuple(dev_ibead_lj_non_nat.end(), dev_jbead_lj_non_nat.end(), dev_itype_lj_non_nat.end(), dev_jtype_lj_non_nat.end()));
+
+    ZipIterator dev_result_begin(thrust::make_tuple(dev_ibead_neighbor_list_rep.begin(), dev_jbead_neighbor_list_rep.begin(), dev_itype_neighbor_list_rep.begin(),
+                                            dev_jtype_neighbor_list_rep.begin()));
+
+    thrust::sort_by_key(dev_value.begin(), dev_value.end(), dev_initial_begin, thrust::greater<int>());
+
+    thrust::inclusive_scan(dev_value.begin(), dev_value.end(), dev_value.begin(), thrust::plus<int>());
+
+    int arrSize;
+
+    thrust::copy(dev_value.end()-1, dev_value.end(), &arrSize);
+
+    nnl_rep = arrSize;
+
+    free(ibead_neighbor_list_rep);
+    free(jbead_neighbor_list_rep);
+    free(itype_neighbor_list_rep);
+    free(jtype_neighbor_list_rep);
+
+    ibead_neighbor_list_rep = (int *)malloc(nnl_rep*sizeof(int));
+    jbead_neighbor_list_rep = (int *)malloc(nnl_rep*sizeof(int));
+    itype_neighbor_list_rep = (int *)malloc(nnl_rep*sizeof(int));
+    jtype_neighbor_list_rep = (int *)malloc(nnl_rep*sizeof(int));
+
+    HostZipIterator host_result_begin(thrust::make_tuple(ibead_neighbor_list_rep, jbead_neighbor_list_rep, itype_neighbor_list_rep, jtype_neighbor_list_rep));
+
+    ZipIterator dev_result_end(thrust::make_tuple(dev_ibead_neighbor_list_rep.begin() + nnl_rep, dev_jbead_neighbor_list_rep.begin() + nnl_rep,
+                                                dev_itype_neighbor_list_rep.begin() + nnl_rep, dev_jtype_neighbor_list_rep.begin() + nnl_rep));
+
+    thrust::copy(dev_initial_begin, dev_initial_begin + arrSize, host_result_begin);
+
+    nnl_rep--;
+}
+
+void update_neighbor_list() {
 
   double dx, dy, dz;
   double d2;
@@ -126,8 +317,178 @@ void update_neighbor_list_gpu() {
   }
 }
 
-void update_neighbor_list(){
- 	// Declare N
+void update_neighbor_list_thrust(){
+    int N;
+    int *value;
+
+    N = ncon_att;
+    
+    value = (int *)malloc(N*sizeof(int));
+
+    calculate_array_native(ibead_lj_nat, jbead_lj_nat, itype_lj_nat, jtype_lj_nat, unc_pos, lj_nat_pdb_dist, value, boxl, N);
+
+    compact_native_thrust(value);
+
+    free(value);
+
+    N = ncon_rep;
+    
+    value = (int *)malloc(N*sizeof(int));
+
+    calculate_array_non_native(ibead_lj_non_nat, jbead_lj_non_nat, itype_lj_non_nat, jtype_lj_non_nat, unc_pos, value, boxl, N);
+
+    compact_non_native_thrust(value);
+
+    free(value);
+
+}
+
+void compact_native_thrust(int *value){
+    int N;
+
+    N = ncon_att;
+
+    // typedef these iterators for shorthand
+    typedef thrust::device_vector<int>::iterator   IntIterator;
+    typedef thrust::device_vector<double>::iterator DoubleIterator;
+
+    // typedef a tuple of these iterators
+    typedef thrust::tuple<IntIterator, IntIterator, IntIterator, IntIterator, DoubleIterator, DoubleIterator, DoubleIterator, DoubleIterator> IteratorTuple;
+    typedef thrust::tuple<int *, int *, int *, int *, double *, double *, double *, double *> HostIteratorTuple;
+
+    // typedef the zip_iterator of this tuple
+    typedef thrust::zip_iterator<IteratorTuple> ZipIterator;
+    typedef thrust::zip_iterator<HostIteratorTuple> HostZipIterator;
+
+    // Create device initial vectors
+    thrust::device_vector<int> dev_ibead_lj_nat(ibead_lj_nat, ibead_lj_nat+N);
+    thrust::device_vector<int> dev_jbead_lj_nat(jbead_lj_nat, jbead_lj_nat+N);
+    thrust::device_vector<int> dev_itype_lj_nat(itype_lj_nat, itype_lj_nat+N);
+    thrust::device_vector<int> dev_jtype_lj_nat(jtype_lj_nat, jtype_lj_nat+N);
+    thrust::device_vector<double> dev_lj_nat_pdb_dist(lj_nat_pdb_dist, lj_nat_pdb_dist+N);
+    thrust::device_vector<double> dev_lj_nat_pdb_dist2(lj_nat_pdb_dist2, lj_nat_pdb_dist2+N);
+    thrust::device_vector<double> dev_lj_nat_pdb_dist6(lj_nat_pdb_dist6, lj_nat_pdb_dist6+N);
+    thrust::device_vector<double> dev_lj_nat_pdb_dist12(lj_nat_pdb_dist12, lj_nat_pdb_dist12+N);
+
+    // Create device value vector
+    thrust::device_vector<int> dev_value(value, value+N);
+
+    // Create result vectors
+    thrust::device_vector<int> dev_ibead_neighbor_list_att(N);
+    thrust::device_vector<int> dev_jbead_neighbor_list_att(N);
+    thrust::device_vector<int> dev_itype_neighbor_list_att(N);
+    thrust::device_vector<int> dev_jtype_neighbor_list_att(N);
+    thrust::device_vector<double> dev_nl_lj_nat_pdb_dist(N);
+    thrust::device_vector<double> dev_nl_lj_nat_pdb_dist2(N);
+    thrust::device_vector<double> dev_nl_lj_nat_pdb_dist6(N);
+    thrust::device_vector<double> dev_nl_lj_nat_pdb_dist12(N);
+
+    ZipIterator dev_initial_begin(thrust::make_tuple(dev_ibead_lj_nat.begin(), dev_jbead_lj_nat.begin(), dev_itype_lj_nat.begin(), dev_jtype_lj_nat.begin(),
+                                            dev_lj_nat_pdb_dist.begin(), dev_lj_nat_pdb_dist2.begin(), dev_lj_nat_pdb_dist6.begin(), dev_lj_nat_pdb_dist12.begin()));
+                                            
+    ZipIterator dev_initial_end(thrust::make_tuple(dev_ibead_lj_nat.end(), dev_jbead_lj_nat.end(), dev_itype_lj_nat.end(), dev_jtype_lj_nat.end(),
+                                            dev_lj_nat_pdb_dist.end(), dev_lj_nat_pdb_dist2.end(), dev_lj_nat_pdb_dist6.end(), dev_lj_nat_pdb_dist12.end()));
+
+    ZipIterator dev_result_begin(thrust::make_tuple(dev_ibead_neighbor_list_att.begin(), dev_jbead_neighbor_list_att.begin(), dev_itype_neighbor_list_att.begin(),
+                                            dev_jtype_neighbor_list_att.begin(), dev_nl_lj_nat_pdb_dist.begin(), dev_nl_lj_nat_pdb_dist2.begin(), 
+                                            dev_nl_lj_nat_pdb_dist6.begin(), dev_nl_lj_nat_pdb_dist12.begin()));
+
+    nnl_att = thrust::copy_if(dev_initial_begin,  dev_initial_end, dev_value.begin(),  dev_result_begin, (thrust::placeholders::_1 == 1)) - dev_result_begin;
+
+    free(ibead_neighbor_list_att);
+    free(jbead_neighbor_list_att);
+    free(itype_neighbor_list_att);
+    free(jtype_neighbor_list_att);
+    free(nl_lj_nat_pdb_dist);
+    free(nl_lj_nat_pdb_dist2);
+    free(nl_lj_nat_pdb_dist6);
+    free(nl_lj_nat_pdb_dist12);
+
+    ibead_neighbor_list_att = (int *)malloc(nnl_att*sizeof(int));
+    jbead_neighbor_list_att = (int *)malloc(nnl_att*sizeof(int));
+    itype_neighbor_list_att = (int *)malloc(nnl_att*sizeof(int));
+    jtype_neighbor_list_att = (int *)malloc(nnl_att*sizeof(int));
+    nl_lj_nat_pdb_dist = (double *)malloc(nnl_att*sizeof(double));
+    nl_lj_nat_pdb_dist2 = (double *)malloc(nnl_att*sizeof(double));
+    nl_lj_nat_pdb_dist6 = (double *)malloc(nnl_att*sizeof(double));
+    nl_lj_nat_pdb_dist12 = (double *)malloc(nnl_att*sizeof(double));
+
+    HostZipIterator host_result_begin(thrust::make_tuple(ibead_neighbor_list_att, jbead_neighbor_list_att, itype_neighbor_list_att,
+                                            jtype_neighbor_list_att, nl_lj_nat_pdb_dist, nl_lj_nat_pdb_dist2, nl_lj_nat_pdb_dist6, nl_lj_nat_pdb_dist12));
+
+    ZipIterator dev_result_end(thrust::make_tuple(dev_ibead_neighbor_list_att.begin() + nnl_att, dev_jbead_neighbor_list_att.begin() + nnl_att,
+                                                dev_itype_neighbor_list_att.begin() + nnl_att, dev_jtype_neighbor_list_att.begin() + nnl_att, 
+                                                dev_nl_lj_nat_pdb_dist.begin() + nnl_att, dev_nl_lj_nat_pdb_dist2.begin() + nnl_att, 
+                                                dev_nl_lj_nat_pdb_dist6.begin() + nnl_att, dev_nl_lj_nat_pdb_dist12.begin() + nnl_att));
+
+    thrust::copy(dev_result_begin, dev_result_end, host_result_begin);
+
+    nnl_att--;
+}
+
+void compact_non_native_thrust(int *value){
+    int N;
+
+    N = ncon_rep;
+
+    // typedef these iterators for shorthand
+    typedef thrust::device_vector<int>::iterator   IntIterator;
+    typedef thrust::device_vector<double>::iterator DoubleIterator;
+
+    // typedef a tuple of these iterators
+    typedef thrust::tuple<IntIterator, IntIterator, IntIterator, IntIterator> IteratorTuple;
+    typedef thrust::tuple<int *, int *, int *, int *> HostIteratorTuple;
+
+    // typedef the zip_iterator of this tuple
+    typedef thrust::zip_iterator<IteratorTuple> ZipIterator;
+    typedef thrust::zip_iterator<HostIteratorTuple> HostZipIterator;
+
+    // Create device initial vectors
+    thrust::device_vector<int> dev_ibead_lj_non_nat(ibead_lj_non_nat, ibead_lj_non_nat+N);
+    thrust::device_vector<int> dev_jbead_lj_non_nat(jbead_lj_non_nat, jbead_lj_non_nat+N);
+    thrust::device_vector<int> dev_itype_lj_non_nat(itype_lj_non_nat, itype_lj_non_nat+N);
+    thrust::device_vector<int> dev_jtype_lj_non_nat(jtype_lj_non_nat, jtype_lj_non_nat+N);
+
+    // Create device value vector
+    thrust::device_vector<int> dev_value(value, value+N);
+
+    // Create result vectors
+    thrust::device_vector<int> dev_ibead_neighbor_list_rep(N);
+    thrust::device_vector<int> dev_jbead_neighbor_list_rep(N);
+    thrust::device_vector<int> dev_itype_neighbor_list_rep(N);
+    thrust::device_vector<int> dev_jtype_neighbor_list_rep(N);
+
+    ZipIterator dev_initial_begin(thrust::make_tuple(dev_ibead_lj_non_nat.begin(), dev_jbead_lj_non_nat.begin(), dev_itype_lj_non_nat.begin(), dev_jtype_lj_non_nat.begin()));
+                                            
+    ZipIterator dev_initial_end(thrust::make_tuple(dev_ibead_lj_non_nat.end(), dev_jbead_lj_non_nat.end(), dev_itype_lj_non_nat.end(), dev_jtype_lj_non_nat.end()));
+
+    ZipIterator dev_result_begin(thrust::make_tuple(dev_ibead_neighbor_list_rep.begin(), dev_jbead_neighbor_list_rep.begin(), dev_itype_neighbor_list_rep.begin(),
+                                            dev_jtype_neighbor_list_rep.begin()));
+
+    nnl_rep = thrust::copy_if(dev_initial_begin,  dev_initial_end, dev_value.begin(),  dev_result_begin, (thrust::placeholders::_1 == 1)) - dev_result_begin;
+
+    free(ibead_neighbor_list_rep);
+    free(jbead_neighbor_list_rep);
+    free(itype_neighbor_list_rep);
+    free(jtype_neighbor_list_rep);
+
+    ibead_neighbor_list_rep = (int *)malloc(nnl_rep*sizeof(int));
+    jbead_neighbor_list_rep = (int *)malloc(nnl_rep*sizeof(int));
+    itype_neighbor_list_rep = (int *)malloc(nnl_rep*sizeof(int));
+    jtype_neighbor_list_rep = (int *)malloc(nnl_rep*sizeof(int));
+
+    HostZipIterator host_result_begin(thrust::make_tuple(ibead_neighbor_list_rep, jbead_neighbor_list_rep, itype_neighbor_list_rep, jtype_neighbor_list_rep));
+
+    ZipIterator dev_result_end(thrust::make_tuple(dev_ibead_neighbor_list_rep.begin() + nnl_rep, dev_jbead_neighbor_list_rep.begin() + nnl_rep,
+                                                dev_itype_neighbor_list_rep.begin() + nnl_rep, dev_jtype_neighbor_list_rep.begin() + nnl_rep));
+
+    thrust::copy(dev_result_begin, dev_result_end, host_result_begin);
+
+    nnl_rep--;
+}
+
+void update_neighbor_list_RL(){
+    // Declare N
 	int N;
 	
 	// Set N
@@ -212,20 +573,20 @@ void update_neighbor_list(){
     free(value);
 }
 
-void calculate_array_native(int *ibead_lj_nat, int *jbead_lj_nat, int *itype_lj_nat, int *jtype_lj_nat, float3 *unc_pos, double *lj_nat_pdb_dist, 
+void calculate_array_native(int *ibead_lj_nat, int *jbead_lj_nat, int *itype_lj_nat, int *jtype_lj_nat, double3 *unc_pos, double *lj_nat_pdb_dist, 
                             int *value, int boxl, int N){
 							
 	// Calculate array sizes
 	int size_int = N*sizeof(int);
 	int size_double = N*sizeof(double);
-	int size_float3 = (nbead+1)*sizeof(float3);
+	int size_double3 = (nbead+1)*sizeof(double3);
 	
 	// Declare device pointers
 	int *dev_ibead_lj_nat;
 	int *dev_jbead_lj_nat;
 	int *dev_itype_lj_nat;
 	int *dev_jtype_lj_nat;
-	float3 *dev_unc_pos;
+	double3 *dev_unc_pos;
 	double *dev_lj_nat_pdb_dist; 
 	int *dev_value;
 	
@@ -234,7 +595,7 @@ void calculate_array_native(int *ibead_lj_nat, int *jbead_lj_nat, int *itype_lj_
 	cudaMalloc((void **)&dev_jbead_lj_nat, size_int);
 	cudaMalloc((void **)&dev_itype_lj_nat, size_int);
 	cudaMalloc((void **)&dev_jtype_lj_nat, size_int);
-	cudaMalloc((void **)&dev_unc_pos, size_float3);
+	cudaMalloc((void **)&dev_unc_pos, size_double3);
 	cudaMalloc((void **)&dev_lj_nat_pdb_dist, size_double);
 	cudaMalloc((void **)&dev_value, size_int);
 	
@@ -243,7 +604,7 @@ void calculate_array_native(int *ibead_lj_nat, int *jbead_lj_nat, int *itype_lj_
 	cudaMemcpy(dev_jbead_lj_nat, jbead_lj_nat, size_int, cudaMemcpyHostToDevice);
 	cudaMemcpy(dev_itype_lj_nat, itype_lj_nat, size_int, cudaMemcpyHostToDevice);
 	cudaMemcpy(dev_jtype_lj_nat, jtype_lj_nat, size_int, cudaMemcpyHostToDevice);
-	cudaMemcpy(dev_unc_pos, unc_pos, size_float3, cudaMemcpyHostToDevice);
+	cudaMemcpy(dev_unc_pos, unc_pos, size_double3, cudaMemcpyHostToDevice);
 	cudaMemcpy(dev_lj_nat_pdb_dist, lj_nat_pdb_dist, size_double, cudaMemcpyHostToDevice);
     cudaDeviceSynchronize();
 	
@@ -256,7 +617,7 @@ void calculate_array_native(int *ibead_lj_nat, int *jbead_lj_nat, int *itype_lj_
     /*
     for(int i = 0; i < N; i++){
         printf("i: %d  j: %d\n",ibead_lj_nat[i],jbead_lj_nat[i]);
-        float3 a = unc_pos[ibead_lj_nat[i]];
+        double3 a = unc_pos[ibead_lj_nat[i]];
         printf("%d: x=%f, y=%f, z=%f\n", ibead_lj_nat[i], a.x, a.y, a.z);
         
         a = unc_pos[jbead_lj_nat[i]];
@@ -265,11 +626,11 @@ void calculate_array_native(int *ibead_lj_nat, int *jbead_lj_nat, int *itype_lj_
     
     int *test_ibead_lj_nat = (int *)malloc(size_int);
     int *test_jbead_lj_nat = (int *)malloc(size_int);
-    float3 *test_unc_pos = (float3 *)malloc(size_float3);
+    double3 *test_unc_pos = (double3 *)malloc(size_double3);
     
     cudaMemcpy(test_ibead_lj_nat, dev_ibead_lj_nat, size_int, cudaMemcpyDeviceToHost);
 	cudaMemcpy(test_jbead_lj_nat, dev_jbead_lj_nat, size_int, cudaMemcpyDeviceToHost);
-    cudaMemcpy(test_unc_pos, dev_unc_pos, size_float3, cudaMemcpyDeviceToHost);
+    cudaMemcpy(test_unc_pos, dev_unc_pos, size_double3, cudaMemcpyDeviceToHost);
     
     for(int i = 0; i < N; i++){
         if(i > 0 && i < N){
@@ -278,7 +639,7 @@ void calculate_array_native(int *ibead_lj_nat, int *jbead_lj_nat, int *itype_lj_
             unc_pos[jbead_lj_nat[i]].x != test_unc_pos[test_jbead_lj_nat[i]].x || unc_pos[jbead_lj_nat[i]].y != test_unc_pos[test_jbead_lj_nat[i]].y ||
             unc_pos[jbead_lj_nat[i]].z != test_unc_pos[test_jbead_lj_nat[i]].z){
                 printf("i: %d  j: %d\n",ibead_lj_nat[i],jbead_lj_nat[i]);
-                float3 a = unc_pos[ibead_lj_nat[i]];
+                double3 a = unc_pos[ibead_lj_nat[i]];
                 printf("%d: x=%f, y=%f, z=%f\n", ibead_lj_nat[i], a.x, a.y, a.z);
                 
                 a = unc_pos[jbead_lj_nat[i]];
@@ -315,7 +676,7 @@ void calculate_array_native(int *ibead_lj_nat, int *jbead_lj_nat, int *itype_lj_
 	cudaFree(dev_value);
 }
 
-__global__ void array_native_kernel(int *dev_ibead_lj_nat, int *dev_jbead_lj_nat, int *dev_itype_lj_nat, int *dev_jtype_lj_nat, float3 *dev_unc_pos, double *dev_lj_nat_pdb_dist, 
+__global__ void array_native_kernel(int *dev_ibead_lj_nat, int *dev_jbead_lj_nat, int *dev_itype_lj_nat, int *dev_jtype_lj_nat, double3 *dev_unc_pos, double *dev_lj_nat_pdb_dist, 
                             int *dev_value, int boxl, int N){
   int i = blockIdx.x * blockDim.x + threadIdx.x;
   if(i > 0 && i <= N){
@@ -379,20 +740,20 @@ __global__ void array_native_kernel(int *dev_ibead_lj_nat, int *dev_jbead_lj_nat
   }
 }
 
-void calculate_array_non_native(int *ibead_lj_non_nat, int *jbead_lj_non_nat, int *itype_lj_non_nat, int *jtype_lj_non_nat, float3 *unc_pos,
+void calculate_array_non_native(int *ibead_lj_non_nat, int *jbead_lj_non_nat, int *itype_lj_non_nat, int *jtype_lj_non_nat, double3 *unc_pos,
                             int *value, int boxl, int N){
 							
 	// Calculate array sizes
 	int size_int = N*sizeof(int);
 	int size_double = N*sizeof(double);
-	int size_float3 = (nbead+1)*sizeof(float3);
+	int size_double3 = (nbead+1)*sizeof(double3);
 	
 	// Declare device pointers
 	int *dev_ibead_lj_non_nat;
 	int *dev_jbead_lj_non_nat;
 	int *dev_itype_lj_non_nat;
 	int *dev_jtype_lj_non_nat;
-	float3 *dev_unc_pos; 
+	double3 *dev_unc_pos; 
 	int *dev_value;
 	
 	// Allocate device arrays
@@ -400,7 +761,7 @@ void calculate_array_non_native(int *ibead_lj_non_nat, int *jbead_lj_non_nat, in
 	cudaMalloc((void **)&dev_jbead_lj_non_nat, size_int);
 	cudaMalloc((void **)&dev_itype_lj_non_nat, size_int);
 	cudaMalloc((void **)&dev_jtype_lj_non_nat, size_int);
-	cudaMalloc((void **)&dev_unc_pos, size_float3);
+	cudaMalloc((void **)&dev_unc_pos, size_double3);
 	cudaMalloc((void **)&dev_value, size_int);
 	
 	// Copy host arrays to device arrays
@@ -408,7 +769,7 @@ void calculate_array_non_native(int *ibead_lj_non_nat, int *jbead_lj_non_nat, in
 	cudaMemcpy(dev_jbead_lj_non_nat, jbead_lj_non_nat, size_int, cudaMemcpyHostToDevice);
 	cudaMemcpy(dev_itype_lj_non_nat, itype_lj_non_nat, size_int, cudaMemcpyHostToDevice);
 	cudaMemcpy(dev_jtype_lj_non_nat, jtype_lj_non_nat, size_int, cudaMemcpyHostToDevice);
-	cudaMemcpy(dev_unc_pos, unc_pos, size_float3, cudaMemcpyHostToDevice);
+	cudaMemcpy(dev_unc_pos, unc_pos, size_double3, cudaMemcpyHostToDevice);
 	cudaMemcpy(dev_value, value, size_int, cudaMemcpyHostToDevice);
 	
 	// Calculate block/thread count
@@ -449,7 +810,7 @@ void calculate_array_non_native(int *ibead_lj_non_nat, int *jbead_lj_non_nat, in
 }
 
 __global__ void array_non_native_kernel(int *dev_ibead_lj_non_nat, int *dev_jbead_lj_non_nat, int *dev_itype_lj_non_nat, int *dev_jtype_lj_non_nat, 
-                                        float3 *dev_unc_pos, int *dev_value, int boxl, int N){
+                                        double3 *dev_unc_pos, int *dev_value, int boxl, int N){
   int i = blockIdx.x * blockDim.x + threadIdx.x;
   if(i > 0 && i <= N){
     double dx, dy, dz;
@@ -882,86 +1243,29 @@ __global__ void sumIt (int *Y, int *S, int InputSize) {
     }
 }
 
-/*
-__global__ void dummy(int *dev_ibead_lj_nat, int *dev_jbead_lj_nat, int *dev_itype_lj_nat, int *dev_jtype_lj_nat, float3 *dev_unc_pos, double *dev_lj_nat_pdb_dist, 
-                            int *&dev_value, int boxl, int N, int nbead){
-  int i = blockIdx.x * blockDim.x + threadIdx.x;
-  if(i > 0 && i < N){
-    double dx, dy, dz;
-    double d2;
-    int ibead, jbead, itype, jtype;
-    double rcut, rcut2;
+template <typename T>
+void allocate_and_copy(T *index, int *dev_value, int *dev_output, int N, int arrSize, T *&result_index){
+    int threads = (int)min(N, SECTION_SIZE);
+    int blocks = (int)ceil(1.0*N/SECTION_SIZE);
 
-    if(i >= N){
-        printf("%d\n", i);
-    }
+    T *dev_index;
+    cudaMalloc((void**)&dev_index, N*sizeof(T));
+    cudaMemcpy(dev_index, index, N*sizeof(T), cudaMemcpyHostToDevice);
+    T *dev_result_index;
+    cudaMalloc((void**)&dev_result_index, arrSize*sizeof(T));
 
-    // record sigma for ibead and jbead
-    ibead = dev_ibead_lj_nat[i];
-    //printf("dev_ibead_lj_nat[%d]", i);
-    
-    jbead = dev_jbead_lj_nat[i];
-    //printf("dev_jbead_lj_nat[%d]", i);
-    
-    // record type of bead for ibead and jbead
-    itype = dev_itype_lj_nat[i];
-    //printf("dev_itype_lj_nat[%d]", i);
-    
-    jtype = dev_jtype_lj_nat[i];
-    //printf("dev_jtype_lj_nat[%d]", i);
-    
-    
-    if(ibead > nbead+1){
-        printf("ibead: %d\n", i);
-    }else if(jbead > nbead+1){
-        printf("jbead: %d\n", i);
-    }
-    
-    
-    // calculate distance in x, y, and z for ibead and jbead
-    dx = dev_unc_pos[jbead].x - dev_unc_pos[ibead].x;
-    printf("dev_unc_pos[%d].x - dev_unc_pos[%d].x", jbead, ibead);
-    
-    dy = dev_unc_pos[jbead].y - dev_unc_pos[ibead].y;
-    printf("dev_unc_pos[%d].y - dev_unc_pos[%d].y", jbead, ibead);
+    copyElements<<<blocks, threads>>>(dev_index, dev_value, dev_output, dev_result_index, N);
+    cudaDeviceSynchronize();
+    free(result_index);
+    result_index = (T *)malloc(arrSize*sizeof(T));
+    cudaMemcpy(result_index, dev_result_index, arrSize*sizeof(T), cudaMemcpyDeviceToHost); 
 
-    dz = dev_unc_pos[jbead].z - dev_unc_pos[ibead].z;
-    printf("dev_unc_pos[%d].z - dev_unc_pos[%d].z", jbead, ibead);
+    cudaDeviceSynchronize();
+    cudaFree(dev_index);
+    cudaFree(dev_result_index);
 
-    // apply periodic boundary conditions to dx, dy, and dz
-    //dx -= boxl*rnd(dx/boxl);
-    double rnd_value;
-
-    rnd_value = ( ((dx/boxl)>0) ? std::floor((dx/boxl)+0.5) : std::ceil((dx/boxl)-0.5) );
-    dx -= boxl*rnd_value;
-
-    //dy -= boxl*rnd(dy/boxl);
-    rnd_value = ( ((dy/boxl)>0) ? std::floor((dy/boxl)+0.5) : std::ceil((dy/boxl)-0.5) );
-    dy -= boxl*rnd_value;
-
-    //dz -= boxl*rnd(dz/boxl);
-    rnd_value = ( ((dz/boxl)>0) ? std::floor((dz/boxl)+0.5) : std::ceil((dz/boxl)-0.5) );
-    dz -= boxl*rnd_value;
-
-    // compute square of distance between ibead and jbead
-    d2 = dx*dx+dy*dy+dz*dz;
-
-    rcut = 3.2*dev_lj_nat_pdb_dist[i];
-    printf("dev_lj_nat_pdb_dist[%d]", i);
-
-    // square cutoff distance, since sqrt(d2) is computationally expensive
-    rcut2 = rcut*rcut;
-
-    if(d2 < rcut2){
-      dev_value[i] = 1;
-    }else{
-      dev_value[i] = 0;
-    }
-    
-  }
+    cudaDeviceSynchronize();
 }
-*/
-
 
 int compact_native(int *ibead_lj_nat, int *jbead_lj_nat, int *itype_lj_nat, int *jtype_lj_nat, double *lj_nat_pdb_dist,
                     double *lj_nat_pdb_dist2, double *lj_nat_pdb_dist6, double *lj_nat_pdb_dist12, int *value, int N, 
@@ -998,7 +1302,8 @@ int compact_native(int *ibead_lj_nat, int *jbead_lj_nat, int *itype_lj_nat, int 
     int blocks = (int)ceil(1.0*N/SECTION_SIZE);
 
     // Declare and allocate dev_result array to store compacted indices on device (on GPU)
-    int *dev_ibead_lj_nat;
+    allocate_and_copy<int>(ibead_lj_nat, dev_value, dev_output, N, arrSize, ibead_neighbor_list_att);
+    /*int *dev_ibead_lj_nat;
     cudaMalloc((void**)&dev_ibead_lj_nat, N*sizeof(int));
     cudaMemcpy(dev_ibead_lj_nat, ibead_lj_nat, N*sizeof(int), cudaMemcpyHostToDevice);
     int *dev_ibead_neighbor_list_att;
@@ -1014,9 +1319,10 @@ int compact_native(int *ibead_lj_nat, int *jbead_lj_nat, int *itype_lj_nat, int 
     cudaFree(dev_ibead_lj_nat);
     cudaFree(dev_ibead_neighbor_list_att);
 
-    cudaDeviceSynchronize();
+    cudaDeviceSynchronize();*/
     
-    int *dev_jbead_lj_nat;
+    allocate_and_copy<int>(jbead_lj_nat, dev_value, dev_output, N, arrSize, jbead_neighbor_list_att);
+    /*int *dev_jbead_lj_nat;
     cudaMalloc((void**)&dev_jbead_lj_nat, N*sizeof(int));
     cudaMemcpy(dev_jbead_lj_nat, jbead_lj_nat, N*sizeof(int), cudaMemcpyHostToDevice);
     int *dev_jbead_neighbor_list_att;
@@ -1032,9 +1338,10 @@ int compact_native(int *ibead_lj_nat, int *jbead_lj_nat, int *itype_lj_nat, int 
     cudaFree(dev_jbead_lj_nat);
     cudaFree(dev_jbead_neighbor_list_att);
 
-    cudaDeviceSynchronize();
+    cudaDeviceSynchronize();*/
 
-    int *dev_itype_lj_nat;
+    allocate_and_copy<int>(itype_lj_nat, dev_value, dev_output, N, arrSize, itype_neighbor_list_att);
+    /*int *dev_itype_lj_nat;
     cudaMalloc((void**)&dev_itype_lj_nat, N*sizeof(int));
     cudaMemcpy(dev_itype_lj_nat, itype_lj_nat, N*sizeof(int), cudaMemcpyHostToDevice);
     int *dev_itype_neighbor_list_att;
@@ -1050,10 +1357,10 @@ int compact_native(int *ibead_lj_nat, int *jbead_lj_nat, int *itype_lj_nat, int 
     cudaFree(dev_itype_lj_nat);
     cudaFree(dev_itype_neighbor_list_att);
 
-    cudaDeviceSynchronize();
+    cudaDeviceSynchronize();*/
 
-
-    int *dev_jtype_lj_nat;
+    allocate_and_copy<int>(jtype_lj_nat, dev_value, dev_output, N, arrSize, jtype_neighbor_list_att);
+    /*int *dev_jtype_lj_nat;
     cudaMalloc((void**)&dev_jtype_lj_nat, N*sizeof(int));
     cudaMemcpy(dev_jtype_lj_nat, jtype_lj_nat, N*sizeof(int), cudaMemcpyHostToDevice);
     int *dev_jtype_neighbor_list_att;
@@ -1069,9 +1376,10 @@ int compact_native(int *ibead_lj_nat, int *jbead_lj_nat, int *itype_lj_nat, int 
     cudaFree(dev_jtype_lj_nat);
     cudaFree(dev_jtype_neighbor_list_att);
 
-    cudaDeviceSynchronize();
+    cudaDeviceSynchronize();*/
 
-    double *dev_lj_nat_pdb_dist;
+    allocate_and_copy<double>(lj_nat_pdb_dist, dev_value, dev_output, N, arrSize, nl_lj_nat_pdb_dist);
+    /*double *dev_lj_nat_pdb_dist;
     cudaMalloc((void**)&dev_lj_nat_pdb_dist, N*sizeof(double));
     cudaMemcpy(dev_lj_nat_pdb_dist, lj_nat_pdb_dist, N*sizeof(double), cudaMemcpyHostToDevice);
     double *dev_nl_lj_nat_pdb_dist;
@@ -1087,9 +1395,10 @@ int compact_native(int *ibead_lj_nat, int *jbead_lj_nat, int *itype_lj_nat, int 
     cudaFree(dev_lj_nat_pdb_dist);
     cudaFree(dev_nl_lj_nat_pdb_dist);
 
-    cudaDeviceSynchronize();
+    cudaDeviceSynchronize();*/
 
-    double *dev_lj_nat_pdb_dist2;
+    allocate_and_copy<double>(lj_nat_pdb_dist2, dev_value, dev_output, N, arrSize, nl_lj_nat_pdb_dist2);
+    /*double *dev_lj_nat_pdb_dist2;
     cudaMalloc((void**)&dev_lj_nat_pdb_dist2, N*sizeof(double));
     cudaMemcpy(dev_lj_nat_pdb_dist2, lj_nat_pdb_dist2, N*sizeof(double), cudaMemcpyHostToDevice);
     double *dev_nl_lj_nat_pdb_dist2;
@@ -1105,9 +1414,10 @@ int compact_native(int *ibead_lj_nat, int *jbead_lj_nat, int *itype_lj_nat, int 
     cudaFree(dev_lj_nat_pdb_dist2);
     cudaFree(dev_nl_lj_nat_pdb_dist2);
 
-    cudaDeviceSynchronize();
+    cudaDeviceSynchronize();*/
 
-    double *dev_lj_nat_pdb_dist6;
+    allocate_and_copy<double>(lj_nat_pdb_dist6, dev_value, dev_output, N, arrSize, nl_lj_nat_pdb_dist6);
+    /*double *dev_lj_nat_pdb_dist6;
     cudaMalloc((void**)&dev_lj_nat_pdb_dist6, N*sizeof(double));
     cudaMemcpy(dev_lj_nat_pdb_dist6, lj_nat_pdb_dist6, N*sizeof(double), cudaMemcpyHostToDevice);
     double *dev_nl_lj_nat_pdb_dist6;
@@ -1123,9 +1433,10 @@ int compact_native(int *ibead_lj_nat, int *jbead_lj_nat, int *itype_lj_nat, int 
     cudaFree(dev_lj_nat_pdb_dist6);
     cudaFree(dev_nl_lj_nat_pdb_dist6);
 
-    cudaDeviceSynchronize();
+    cudaDeviceSynchronize();*/
 
-    double *dev_lj_nat_pdb_dist12;
+    allocate_and_copy<double>(lj_nat_pdb_dist12, dev_value, dev_output, N, arrSize, nl_lj_nat_pdb_dist12);
+    /*double *dev_lj_nat_pdb_dist12;
     cudaMalloc((void**)&dev_lj_nat_pdb_dist12, N*sizeof(double));
     cudaMemcpy(dev_lj_nat_pdb_dist12, lj_nat_pdb_dist12, N*sizeof(double), cudaMemcpyHostToDevice);
     double *dev_nl_lj_nat_pdb_dist12;
@@ -1141,7 +1452,7 @@ int compact_native(int *ibead_lj_nat, int *jbead_lj_nat, int *itype_lj_nat, int 
     cudaFree(dev_lj_nat_pdb_dist12);
     cudaFree(dev_nl_lj_nat_pdb_dist12);
 
-    cudaDeviceSynchronize();
+    cudaDeviceSynchronize();*/
 
     cudaFree(dev_value);
     cudaFree(dev_output);
@@ -1191,7 +1502,8 @@ int compact_non_native(int *ibead_lj_non_nat, int *jbead_lj_non_nat, int *itype_
     int blocks = (int)ceil(1.0*N/SECTION_SIZE);
 
     // Declare and allocate dev_result array to store compacted indices on device (on GPU)
-    int *dev_ibead_lj_non_nat;
+    allocate_and_copy<int>(ibead_lj_non_nat, dev_value, dev_output, N, arrSize, ibead_neighbor_list_rep);
+    /*int *dev_ibead_lj_non_nat;
     cudaMalloc((void**)&dev_ibead_lj_non_nat, N*sizeof(int));
     cudaMemcpy(dev_ibead_lj_non_nat, ibead_lj_non_nat, N*sizeof(int), cudaMemcpyHostToDevice);
     int *dev_ibead_neighbor_list_rep;
@@ -1207,10 +1519,10 @@ int compact_non_native(int *ibead_lj_non_nat, int *jbead_lj_non_nat, int *itype_
     cudaFree(dev_ibead_lj_non_nat);
     cudaFree(dev_ibead_neighbor_list_rep);
 
-    cudaDeviceSynchronize();
+    cudaDeviceSynchronize();*/
 
-    
-    int *dev_jbead_lj_non_nat;
+    allocate_and_copy<int>(jbead_lj_non_nat, dev_value, dev_output, N, arrSize, jbead_neighbor_list_rep);
+    /*int *dev_jbead_lj_non_nat;
     cudaMalloc((void**)&dev_jbead_lj_non_nat, N*sizeof(int));
     cudaMemcpy(dev_jbead_lj_non_nat, jbead_lj_non_nat, N*sizeof(int), cudaMemcpyHostToDevice);
     int *dev_jbead_neighbor_list_rep;
@@ -1226,10 +1538,10 @@ int compact_non_native(int *ibead_lj_non_nat, int *jbead_lj_non_nat, int *itype_
     cudaFree(dev_jbead_lj_non_nat);
     cudaFree(dev_jbead_neighbor_list_rep);
 
-    cudaDeviceSynchronize();
+    cudaDeviceSynchronize();*/
 
-
-    int *dev_itype_lj_non_nat;
+    allocate_and_copy<int>(itype_lj_non_nat, dev_value, dev_output, N, arrSize, itype_neighbor_list_rep);
+    /*int *dev_itype_lj_non_nat;
     cudaMalloc((void**)&dev_itype_lj_non_nat, N*sizeof(int));
     cudaMemcpy(dev_itype_lj_non_nat, itype_lj_non_nat, N*sizeof(int), cudaMemcpyHostToDevice);
     int *dev_itype_neighbor_list_rep;
@@ -1245,10 +1557,10 @@ int compact_non_native(int *ibead_lj_non_nat, int *jbead_lj_non_nat, int *itype_
     cudaFree(dev_itype_lj_non_nat);
     cudaFree(dev_itype_neighbor_list_rep);
 
-    cudaDeviceSynchronize();
+    cudaDeviceSynchronize();*/
 
-
-    int *dev_jtype_lj_non_nat;
+    allocate_and_copy<int>(jtype_lj_non_nat, dev_value, dev_output, N, arrSize, jtype_neighbor_list_rep);
+    /*int *dev_jtype_lj_non_nat;
     cudaMalloc((void**)&dev_jtype_lj_non_nat, N*sizeof(int));
     cudaMemcpy(dev_jtype_lj_non_nat, jtype_lj_non_nat, N*sizeof(int), cudaMemcpyHostToDevice);
     int *dev_jtype_neighbor_list_rep;
@@ -1264,7 +1576,7 @@ int compact_non_native(int *ibead_lj_non_nat, int *jbead_lj_non_nat, int *itype_
     cudaFree(dev_jtype_lj_non_nat);
     cudaFree(dev_jtype_neighbor_list_rep);
 
-    cudaDeviceSynchronize();
+    cudaDeviceSynchronize();*/
 
     cudaFree(dev_value);
     cudaFree(dev_output);

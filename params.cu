@@ -69,6 +69,21 @@ void set_params(int icmd)
   } else if( !strcmp(opt[opt_ptr[icmd]],"nnlup") ) { // neighbor / cell list update frequency
     nnlup = atoi(opt[opt_ptr[icmd]+1]);
 
+  }else if(!strcmp(opt[opt_ptr[icmd]],"usegpu_nl")){
+    usegpu_nl = atoi((opt[opt_ptr[icmd]+1]));
+
+  }else if(!strcmp(opt[opt_ptr[icmd]],"usegpu_pl")){
+    usegpu_pl = atoi((opt[opt_ptr[icmd]+1]));
+
+  }else if(!strcmp(opt[opt_ptr[icmd]],"usegpu_vdw")){
+    usegpu_vdw = atoi((opt[opt_ptr[icmd]+1]));
+
+  } else if(!strcmp(opt[opt_ptr[icmd]],"nl_algorithm")){
+    strcpy(nl_algorithm, opt[opt_ptr[icmd]+1]);
+
+  } else if(!strcmp(opt[opt_ptr[icmd]],"pl_algorithm")){
+    strcpy(pl_algorithm, opt[opt_ptr[icmd]+1]);
+
   } else if( !strcmp(opt[opt_ptr[icmd]],"boxl") ) { // box length for pbc
     boxl = atof(opt[opt_ptr[icmd]+1]);
   } else if( !strcmp(opt[opt_ptr[icmd]],"ncell") ) { // number of cells along box length
@@ -355,10 +370,10 @@ void alloc_arrays()
   // coordinates
 
   nbead = 1530;
-  pos = new float3[nbead+1];
-  unc_pos = new float3[nbead+1];
-  vel = new float3[nbead+1];
-  force = new float3[nbead+1];
+  pos = new double3[nbead+1];
+  unc_pos = new double3[nbead+1];
+  vel = new double3[nbead+1];
+  force = new double3[nbead+1];
   rna_base = new int [nbead+1];
   rna_phosphate = new int [nbead+1];
   pos_allocated = 1;
@@ -546,11 +561,11 @@ void init_pos(int nbead)
 {
   using namespace std;
 
-  unc_pos = new float3[nbead+1];
-  pos = new float3[nbead+1];
+  unc_pos = new double3[nbead+1];
+  pos = new double3[nbead+1];
 
-  vel = new float3[nbead+1];
-  force = new float3[nbead+1];
+  vel = new double3[nbead+1];
+  force = new double3[nbead+1];
 
   pos_allocated = 1;
   unc_pos_allocated = 1;

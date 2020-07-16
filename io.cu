@@ -136,6 +136,46 @@ void print_sim_params() {
     cout << oline << endl;
     sprintf(oline,"Neighbor List Update Frequency    : %d", nnlup);
     cout << oline << endl;
+    sprintf(oline,"Use GPU NL                        : %d", usegpu_nl);
+    cout << oline << endl;
+
+    if(usegpu_nl == 1){
+      if(!strcmp(nl_algorithm,"RL")){
+        sprintf(oline,"Neighbor List Algorithm           : %s", "RL");
+        cout << oline << endl;
+      }else if(!strcmp(nl_algorithm,"thrust")){
+        sprintf(oline,"Neighbor List Algorithm           : %s", "thrust");
+        cout << oline << endl;
+      }else if(!strcmp(nl_algorithm,"CL")){
+        sprintf(oline,"Neighbor List Algorithm           : %s", "CL");
+        cout << oline << endl;
+      }else{
+        sprintf(oline,"INVALID ALGORITHM SELECTION");
+        cout << oline << endl;
+        exit(-1);
+      }
+    }
+    
+    sprintf(oline,"Use GPU PL                        : %d", usegpu_pl);
+    cout << oline << endl;
+
+    if(usegpu_pl == 1){
+      if(!strcmp(pl_algorithm,"RL")){
+        sprintf(oline,"Pair List Algorithm               : %s", "RL");
+        cout << oline << endl;
+      }else if(!strcmp(pl_algorithm,"thrust")){
+        sprintf(oline,"Pair List Algorithm               : %s", "thrust");
+        cout << oline << endl;
+      }else if(!strcmp(pl_algorithm,"CL")){
+        sprintf(oline,"Pair List Algorithm               : %s", "CL");
+        cout << oline << endl;
+      }else{
+        sprintf(oline,"INVALID ALGORITHM SELECTION");
+        cout << oline << endl;
+        exit(-1);
+      }
+    }
+
   } else if (celllist == 1) {
     sprintf(oline,"Long-range Cutoff Type            : %s", "Cell List");
     cout << oline << endl;
@@ -148,6 +188,9 @@ void print_sim_params() {
     sprintf(oline,"Long-range Cutoff Type            : %s", "None");
     cout << oline << endl;
   }
+
+  sprintf(oline,"Use GPU VDW                       : %d", usegpu_vdw);
+  cout << oline << endl;
 
   cout << endl;
 

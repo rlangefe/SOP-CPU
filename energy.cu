@@ -3,6 +3,26 @@
 #include "global.h"
 #include "energy.h"
 
+#define SECTION_SIZE 1024
+
+__device__ double dev_coeff_att[3][3] = { 
+  {0.0, 0.0, 0.0},
+  {0.0, 0.7, 0.8},
+  {0.0, 0.8, 1.0} 
+};
+
+__device__ double dev_coeff_rep[3][3] = { 
+  {0.0, 0.0, 0.0},
+  {0.0, 1.0, 1.0},
+  {0.0, 1.0, 1.0} 
+};
+
+__device__ __constant__ double dev_sigma_rep[3][3] = {
+	{0.0, 0.0, 0.0},
+	{0.0, 3.8, 5.4},
+	{0.0, 5.4, 7.0}
+};
+
 void energy_eval()
 {
 
@@ -65,7 +85,11 @@ void set_potential() {
       break;
     case 5:
       if( pot_term_on[i] ) {
+        if(usegpu_vdw == 0){
 	pot_term[++iterm] = &vdw_energy;
+        }else{
+          pot_term[++iterm] = &vdw_energy_gpu;
+        }
       }
       break;
     default:
@@ -463,3 +487,390 @@ void random_force() {
   }
 
 }
+
+/**********************
+* Start GPU Functions *
+**********************/
+
+void vdw_energy_gpu()
+{
+  e_vdw_rr = 0.0;
+  e_vdw_rr_att = 0.0;
+  e_vdw_rr_rep = 0.0;
+
+  vdw_energy_att_gpu();
+
+  vdw_energy_rep_gpu();
+
+  e_vdw_rr = e_vdw_rr_att + e_vdw_rr_rep;
+
+  return;
+}
+
+void vdw_energy_att_gpu(){	
+	int N = nil_att + 1;
+	
+	int size_int = N*sizeof(int);
+	int size_double = N*sizeof(double);
+	int size_double3 = (nbead + 1)*sizeof(double3);
+
+	int *dev_ibead_pair_list_att;
+  int *dev_jbead_pair_list_att;
+  int *dev_itype_pair_list_att;
+  int *dev_jtype_pair_list_att;
+	double *dev_pl_lj_nat_pdb_dist6;
+	double *dev_pl_lj_nat_pdb_dist12;
+	
+	double3 *dev_unc_pos;
+	
+	double *dev_result;
+	
+	cudaMalloc((void **)&dev_ibead_pair_list_att, size_int);
+	cudaMalloc((void **)&dev_jbead_pair_list_att, size_int);
+	cudaMalloc((void **)&dev_itype_pair_list_att, size_int);
+	cudaMalloc((void **)&dev_jtype_pair_list_att, size_int);
+	cudaMalloc((void **)&dev_pl_lj_nat_pdb_dist6, size_double);
+	cudaMalloc((void **)&dev_pl_lj_nat_pdb_dist12, size_double);
+	
+	cudaMalloc((void **)&dev_unc_pos, size_double3);
+	
+	cudaMalloc((void **)&dev_result, size_double);
+	
+	cudaMemcpy(dev_ibead_pair_list_att, ibead_pair_list_att, size_int, cudaMemcpyHostToDevice);
+	cudaMemcpy(dev_jbead_pair_list_att, jbead_pair_list_att, size_int, cudaMemcpyHostToDevice);
+	cudaMemcpy(dev_itype_pair_list_att, itype_pair_list_att, size_int, cudaMemcpyHostToDevice);
+	cudaMemcpy(dev_jtype_pair_list_att, jtype_pair_list_att, size_int, cudaMemcpyHostToDevice);
+	cudaMemcpy(dev_pl_lj_nat_pdb_dist6, pl_lj_nat_pdb_dist6, size_double, cudaMemcpyHostToDevice);
+	cudaMemcpy(dev_pl_lj_nat_pdb_dist12, pl_lj_nat_pdb_dist12, size_double, cudaMemcpyHostToDevice);
+	
+	
+	cudaMemcpy(dev_unc_pos, unc_pos, size_double3, cudaMemcpyHostToDevice);
+	
+	int threads = (int)min(N, SECTION_SIZE);
+  int blocks = (int)ceil(1.0*N/SECTION_SIZE);
+	
+	vdw_energy_att_value_kernel<<<blocks, threads>>>(dev_ibead_pair_list_att, dev_jbead_pair_list_att, dev_itype_pair_list_att, dev_jtype_pair_list_att, 
+														dev_pl_lj_nat_pdb_dist6, dev_pl_lj_nat_pdb_dist12, dev_unc_pos, N, boxl, dev_result);
+	
+	hier_ks_scan(dev_result, dev_result, N, 0);
+	
+	cudaMemcpy(&e_vdw_rr_att, &dev_result[N-1], sizeof(double), cudaMemcpyDeviceToHost);
+	
+	cudaFree(dev_ibead_pair_list_att);
+  cudaFree(dev_jbead_pair_list_att);
+  cudaFree(dev_itype_pair_list_att);
+  cudaFree(dev_jtype_pair_list_att);
+	cudaFree(dev_pl_lj_nat_pdb_dist6);
+	cudaFree(dev_pl_lj_nat_pdb_dist12);
+	
+	cudaFree(dev_unc_pos);
+	
+	cudaFree(dev_result);
+}
+
+__global__ void vdw_energy_att_value_kernel(int *dev_ibead_pair_list_att, int *dev_jbead_pair_list_att, int *dev_itype_pair_list_att, int *dev_jtype_pair_list_att, 
+											double *dev_pl_lj_nat_pdb_dist6, double *dev_pl_lj_nat_pdb_dist12, double3 *dev_unc_pos, int N, double boxl, double *dev_result){
+	int i = blockIdx.x * blockDim.x + threadIdx.x;
+	if(i > 0 && i < N){
+		int ibead,jbead;
+		int itype,jtype;
+		double dx,dy,dz,d,d2,d6,d12;
+		
+		ibead = dev_ibead_pair_list_att[i];
+		jbead = dev_jbead_pair_list_att[i];
+		itype = dev_itype_pair_list_att[i];
+		jtype = dev_jtype_pair_list_att[i];
+
+		dx = dev_unc_pos[jbead].x - dev_unc_pos[ibead].x;
+		dy = dev_unc_pos[jbead].y - dev_unc_pos[ibead].y;
+		dz = dev_unc_pos[jbead].z - dev_unc_pos[ibead].z;
+
+		// min images
+
+		// apply periodic boundary conditions to dx, dy, and dz
+		//dx -= boxl*rnd(dx/boxl);
+		double rnd_value;
+
+		rnd_value = ( ((dx/boxl)>0) ? std::floor((dx/boxl)+0.5) : std::ceil((dx/boxl)-0.5) );
+		dx -= boxl*rnd_value;
+
+		//dy -= boxl*rnd(dy/boxl);
+		rnd_value = ( ((dy/boxl)>0) ? std::floor((dy/boxl)+0.5) : std::ceil((dy/boxl)-0.5) );
+		dy -= boxl*rnd_value;
+
+		//dz -= boxl*rnd(dz/boxl);
+		rnd_value = ( ((dz/boxl)>0) ? std::floor((dz/boxl)+0.5) : std::ceil((dz/boxl)-0.5) );
+		dz -= boxl*rnd_value;
+
+		d2 = dx*dx+dy*dy+dz*dz;
+		d6 = d2*d2*d2;
+		d12 = d6*d6;
+
+		dev_result[i] = dev_coeff_att[itype][jtype] * (dev_pl_lj_nat_pdb_dist12[i]/d12)-2.0*(dev_pl_lj_nat_pdb_dist6[i]/d6);
+	}else if(i == 0){
+		dev_result[i] = 0;
+	}
+}
+
+void vdw_energy_rep_gpu(){
+	e_vdw_rr_rep = 0.0;
+	
+	int N = nil_rep + 1;
+	
+	int size_int = N*sizeof(int);
+	int size_double = N*sizeof(double);
+	int size_double3 = (nbead + 1)*sizeof(double3);
+
+	int *dev_ibead_pair_list_rep;
+  int *dev_jbead_pair_list_rep;
+  int *dev_itype_pair_list_rep;
+  int *dev_jtype_pair_list_rep;
+	
+	double3 *dev_unc_pos;
+	
+	double *dev_result;
+	
+	cudaMalloc((void **)&dev_ibead_pair_list_rep, size_int);
+	cudaMalloc((void **)&dev_jbead_pair_list_rep, size_int);
+	cudaMalloc((void **)&dev_itype_pair_list_rep, size_int);
+	cudaMalloc((void **)&dev_jtype_pair_list_rep, size_int);
+	
+	cudaMalloc((void **)&dev_unc_pos, size_double3);
+	
+	cudaMalloc((void **)&dev_result, size_double);
+	
+	cudaMemcpy(dev_ibead_pair_list_rep, ibead_pair_list_rep, size_int, cudaMemcpyHostToDevice);
+	cudaMemcpy(dev_jbead_pair_list_rep, jbead_pair_list_rep, size_int, cudaMemcpyHostToDevice);
+	cudaMemcpy(dev_itype_pair_list_rep, itype_pair_list_rep, size_int, cudaMemcpyHostToDevice);
+	cudaMemcpy(dev_jtype_pair_list_rep, jtype_pair_list_rep, size_int, cudaMemcpyHostToDevice);
+	
+	
+	cudaMemcpy(dev_unc_pos, unc_pos, size_double3, cudaMemcpyHostToDevice);
+	
+	int threads = (int)min(N, SECTION_SIZE);
+    int blocks = (int)ceil(1.0*N/SECTION_SIZE);
+	
+	vdw_energy_rep_value_kernel<<<blocks, threads>>>(dev_ibead_pair_list_rep, dev_jbead_pair_list_rep, dev_itype_pair_list_rep, dev_jtype_pair_list_rep, 
+													                        dev_unc_pos, N, boxl, dev_result);
+	
+	hier_ks_scan(dev_result, dev_result, N, 0);
+	
+	cudaMemcpy(&e_vdw_rr_rep, &dev_result[N-1], sizeof(double), cudaMemcpyDeviceToHost);
+	
+	cudaFree(dev_ibead_pair_list_rep);
+  cudaFree(dev_jbead_pair_list_rep);
+  cudaFree(dev_itype_pair_list_rep);
+  cudaFree(dev_jtype_pair_list_rep);
+	
+	cudaFree(dev_unc_pos);
+	
+	cudaFree(dev_result);
+}
+
+__global__ void vdw_energy_rep_value_kernel(int *dev_ibead_pair_list_rep, int *dev_jbead_pair_list_rep, int *dev_itype_pair_list_rep, int *dev_jtype_pair_list_rep, 
+											double3 *dev_unc_pos, int N, double boxl, double *dev_result){
+	int i = blockIdx.x * blockDim.x + threadIdx.x;
+	if(i > 0 && i < N){
+		int ibead,jbead;
+		int itype,jtype;
+		double dx,dy,dz,d,d2,d6,d12;
+		
+		ibead = dev_ibead_pair_list_rep[i];
+		jbead = dev_jbead_pair_list_rep[i];
+		itype = dev_itype_pair_list_rep[i];
+		jtype = dev_jtype_pair_list_rep[i];
+
+		dx = dev_unc_pos[jbead].x - dev_unc_pos[ibead].x;
+		dy = dev_unc_pos[jbead].y - dev_unc_pos[ibead].y;
+		dz = dev_unc_pos[jbead].z - dev_unc_pos[ibead].z;
+
+		// min images
+
+		// apply periodic boundary conditions to dx, dy, and dz
+		//dx -= boxl*rnd(dx/boxl);
+		double rnd_value;
+
+		rnd_value = ( ((dx/boxl)>0) ? std::floor((dx/boxl)+0.5) : std::ceil((dx/boxl)-0.5) );
+		dx -= boxl*rnd_value;
+
+		//dy -= boxl*rnd(dy/boxl);
+		rnd_value = ( ((dy/boxl)>0) ? std::floor((dy/boxl)+0.5) : std::ceil((dy/boxl)-0.5) );
+		dy -= boxl*rnd_value;
+
+		//dz -= boxl*rnd(dz/boxl);
+		rnd_value = ( ((dz/boxl)>0) ? std::floor((dz/boxl)+0.5) : std::ceil((dz/boxl)-0.5) );
+		dz -= boxl*rnd_value;
+
+		d2 = dx*dx+dy*dy+dz*dz;
+		d6 = d2*d2*d2;
+		d12 = d6*d6;
+
+    double s = dev_sigma_rep[itype][jtype];
+
+    double s6 = s*s*s*s*s*s;
+    double s12 = s*s*s*s*s*s*s*s*s*s*s*s;
+		
+    dev_result[i] = dev_coeff_rep[itype][jtype] * (s12/d12 + s6/d6);
+	}else if(i == 0){
+		dev_result[i] = 0;
+	}
+}
+
+void hier_ks_scan(double *dev_X, double *dev_Y, int N, int re){
+    if(N <= SECTION_SIZE){
+        ksScanInc<<<1, N>>>(dev_X, dev_Y, N);
+
+        cudaDeviceSynchronize();
+
+        return;
+    }else{
+        int threads = (int)min(N, SECTION_SIZE);
+        int blocks = (int)ceil(1.0*N/SECTION_SIZE);
+
+        double *dev_S;
+        cudaMalloc((void**)&dev_S, (int)ceil(1.0*N/SECTION_SIZE) * sizeof(double));
+        
+        ksScanAuxInc<<<blocks, threads>>>(dev_X, dev_Y, N, dev_S);
+        cudaDeviceSynchronize();
+
+        hier_ks_scan(dev_S, dev_S, (int)ceil(1.0*N/SECTION_SIZE), 1);
+        cudaDeviceSynchronize();
+        
+        sumIt<<<blocks, threads>>>(dev_Y, dev_S, N);
+        cudaDeviceSynchronize();
+
+        cudaFree(dev_S);
+
+        return;
+    }
+}
+
+__global__ void ksScanAuxExc (double *X, double *Y, int InputSize, double *S) {
+    double val;
+    
+    __shared__ double XY[SECTION_SIZE];
+    int i = blockIdx.x * blockDim.x + threadIdx.x;
+    if(i < InputSize && threadIdx.x != 0){
+        XY[threadIdx.x] = X[i-1];
+    }else{
+        XY[threadIdx.x] = 0;
+    }
+
+    for(unsigned int stride = 1; stride < blockDim.x; stride *=2){
+        __syncthreads();
+        if(threadIdx.x >= stride){
+            val = XY[threadIdx.x - stride];
+        }
+        __syncthreads();
+        if(threadIdx.x >= stride){
+            XY[threadIdx.x] += val;
+        }
+    }
+
+    __syncthreads();
+    if(i < InputSize){
+        Y[i] = XY[threadIdx.x];
+    }
+    
+    __syncthreads();
+    if(threadIdx.x == 0){
+        S[blockIdx.x] = XY[SECTION_SIZE-1];
+    }
+}
+
+__global__ void ksScanAuxInc (double *X, double *Y, int InputSize, double *S) {
+    double val;
+    
+    __shared__ double XY[SECTION_SIZE];
+    int i = blockIdx.x * blockDim.x + threadIdx.x;
+    if(i < InputSize){
+        XY[threadIdx.x] = X[i];
+    }
+
+    for(unsigned int stride = 1; stride < blockDim.x; stride *=2){
+        __syncthreads();
+        if(threadIdx.x >= stride){
+            val = XY[threadIdx.x - stride];
+        }
+        __syncthreads();
+        if(threadIdx.x >= stride){
+            XY[threadIdx.x] += val;
+        }
+    }
+
+    __syncthreads();
+    if(i < InputSize){
+        Y[i] = XY[threadIdx.x];
+    }
+    
+    __syncthreads();
+    if(threadIdx.x == 0){
+        S[blockIdx.x] = XY[SECTION_SIZE-1];
+    }
+}
+
+__global__ void ksScanExc (double *X, double *Y, double InputSize) {
+    double val;
+    
+    __shared__ double XY[SECTION_SIZE];
+    int i = blockIdx.x * blockDim.x + threadIdx.x;
+    
+    if(i < InputSize && threadIdx.x != 0){
+        XY[threadIdx.x] = X[i-1];
+    }else{
+        XY[threadIdx.x] = 0;
+    }
+
+    for(unsigned int stride = 1; stride < blockDim.x; stride *=2){
+        __syncthreads();
+        if(threadIdx.x >= stride){
+            val = XY[threadIdx.x - stride];
+        }
+        __syncthreads();
+        if(threadIdx.x >= stride){
+            XY[threadIdx.x] += val;
+        }
+    }
+
+    __syncthreads();
+    if(i < InputSize){
+        Y[i] = XY[threadIdx.x];
+    }
+}
+
+__global__ void ksScanInc (double *X, double *Y, int InputSize) {
+    double val;
+    
+    __shared__ double XY[SECTION_SIZE];
+    int i = blockIdx.x * blockDim.x + threadIdx.x;
+    
+    if(i < InputSize){
+        XY[threadIdx.x] = X[i];
+    }
+
+    for(unsigned int stride = 1; stride < blockDim.x; stride *=2){
+        __syncthreads();
+        if(threadIdx.x >= stride){
+            val = XY[threadIdx.x - stride];
+        }
+        __syncthreads();
+        if(threadIdx.x >= stride){
+            XY[threadIdx.x] += val;
+        }
+    }
+
+    __syncthreads();
+    if(i < InputSize){
+        Y[i] = XY[threadIdx.x];
+    }
+}
+
+__global__ void sumIt (double *Y, double *S, int InputSize) {
+    if(blockIdx.x > 0){
+        int i = blockIdx.x * blockDim.x + threadIdx.x;
+        if(i < InputSize){
+            Y[i] += S[blockIdx.x-1];
+        }
+    }
+}
+
