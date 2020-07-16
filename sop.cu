@@ -14,7 +14,6 @@
 #include "neighbor_list.h"
 #include "cell_list.h"
 
-#include <math.h>
 #include <vector_types.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -27,7 +26,7 @@
 #define SECTION_SIZE 1024
 
 __device__ __constant__ double dev_sigma_rep[3][3] = {
-	{0.0, 0.0, 0.0},
+  {0.0, 0.0, 0.0},
 	{0.0, 3.8, 5.4},
 	{0.0, 5.4, 7.0}
 };
@@ -82,9 +81,14 @@ void ex_cmds()
      // read data
      if( !strcmp(cmd[i],"load") ) { load(i); }
      // set parameters
-     else if( !strcmp(cmd[i],"set") ) { set_params(i); }
+     else if( !strcmp(cmd[i],"set") ) {
+       set_params(i);
+     }
      // run simulation
-     else if( !strcmp(cmd[i],"run") ) { simulation_ctrl(); }
+     else if( !strcmp(cmd[i],"run") ) { 
+       //simulation_ctrl();
+       run_ctrl();
+      }
      // ???
      else {};
   }
@@ -134,42 +138,6 @@ void underdamped_ctrl()
 
   print_sim_params();
 
-  /*
-  if (neighborlist == 1) {
-    if(usegpu_nl == 0){
-      update_neighbor_list();
-    }else{
-      if(!strcmp(nl_algorithm,"RL")){
-        update_neighbor_list_RL();
-      }else if(!strcmp(nl_algorithm,"thrust")){
-        update_neighbor_list_thrust();
-      }else if(!strcmp(nl_algorithm,"CL")){
-        update_neighbor_list_CL();
-      }else{
-        cout << "INVALID ALGORITHM TYPE: " << nl_algorithm << endl;
-        exit(-1);
-      }
-    }
-
-    if(usegpu_pl == 0){
-      update_pair_list();
-    }else{
-      if(!strcmp(pl_algorithm,"RL")){
-        update_pair_list_RL();
-      }else if(!strcmp(pl_algorithm,"thrust")){
-        update_pair_list_thrust();
-      }else if(!strcmp(pl_algorithm,"CL")){
-        update_pair_list_CL();
-      }else{
-        cout << "INVALID ALGORITHM TYPE: " << pl_algorithm << endl;
-        exit(-1);
-      }
-    }
-  } else if (celllist == 1) {
-    update_cell_list();
-    update_pair_list();
-  }*/
-
   if(neighborlist == 1){
     run_neighbor_list_update();
     run_pair_list_update();
@@ -194,10 +162,8 @@ void underdamped_ctrl()
   }
 
   if( first_time ) {
-
     energy_eval();
     force_eval();
-
   }
 
   if( binsave ) {
@@ -205,59 +171,16 @@ void underdamped_ctrl()
       record_traj(binfname,uncbinfname);
     }
     while( istep <= nstep ) {
-
       // compute pair separation list
       if ((inlup % nnlup) == 0) {
-        /*
-        if (neighborlist == 1) {
-          if(usegpu_nl == 0){
-            update_neighbor_list();
-          }else{
-            if(!strcmp(nl_algorithm,"RL")){
-              update_neighbor_list_RL();
-            }else if(!strcmp(nl_algorithm,"thrust")){
-              update_neighbor_list_thrust();
-            }else if(!strcmp(nl_algorithm,"CL")){
-              update_neighbor_list_CL();
-            }else{
-              cout << "INVALID ALGORITHM TYPE: " << nl_algorithm << endl;
-              exit(-1);
-            }
-          }
-        } else if (celllist == 1) {
-          update_cell_list();
-      }*/
-      
-      if(neighborlist == 1){
-        run_neighbor_list_update();
-      }else if(celllist == 1){
-        run_cell_list_update();
-      }
-      
-	//	fprintf(stderr, "(%.0lf) neighbor list: (%d/%d)\n", istep, nnl_att, nnl_rep);
+        if(neighborlist == 1){
+          run_neighbor_list_update();
+        }else if(celllist == 1){
+          run_cell_list_update();
+        }
         inlup = 0;
       }
       inlup++;
-      /*
-      if (celllist == 1) {
-        update_pair_list();
-        //	fprintf(stderr, "(%.0lf) pair list: (%d/%d)\n", istep, nil_att, nil_rep);
-      }else if(neighborlist == 1){
-        if(usegpu_pl == 0){
-            update_pair_list();
-        }else{
-          if(!strcmp(pl_algorithm,"RL")){
-            update_pair_list_RL();
-          }else if(!strcmp(pl_algorithm,"thrust")){
-            update_pair_list_thrust();
-          }else if(!strcmp(pl_algorithm,"CL")){
-            update_pair_list_CL();
-          }else{
-            cout << "INVALID ALGORITHM TYPE: " << pl_algorithm << endl;
-            exit(-1);
-          }
-        }
-      }*/
       
       if(celllist == 1 || neighborlist == 1){
         run_pair_list_update();
@@ -265,26 +188,26 @@ void underdamped_ctrl()
 
       underdamped_iteration(incr);
       if( !(iup%nup) ) { // updates
-	energy_eval();
-	calculate_observables(incr);
-        sprintf(oline,"%.0lf %f %f %f %f %f %f %f %d %f",
-                istep,T,kinT,e_bnd,e_ang_ss,e_vdw_rr,rna_etot,
-                Q,contct_nat,rgsq);
-	out << oline << endl;
-	iup = 0;
-	record_traj(binfname,uncbinfname);
-	save_coords(cfname,unccfname);
-	save_vels(vfname);
-	generator.save_state();
+	      energy_eval();
+	      calculate_observables(incr);
+        sprintf(oline,"%.0lf %f %f %f %f %f %f %f %d %f", istep,T,kinT,e_bnd,e_ang_ss,e_vdw_rr,rna_etot, Q,contct_nat,rgsq);
+	      out << oline << endl;
+	      iup = 0;
+	      record_traj(binfname,uncbinfname);
+	      save_coords(cfname,unccfname);
+	      save_vels(vfname);
+	      generator.save_state();
       }
+
       istep += 1.0;
       iup++;
-
     }
     out.close();
   }
 
-  if( first_time ) first_time = 0;
+  if(first_time) {
+    first_time = 0;
+  }
 
   delete [] incr;
 
@@ -311,7 +234,6 @@ void calculate_observables(coord* increment)
 
   contct_nat = 0;
   for( int i=1; i<=ncon_att; i++ ) {
-
     ibead = ibead_lj_nat[i];
     jbead = jbead_lj_nat[i];
     r_ij = lj_nat_pdb_dist[i];
@@ -355,10 +277,9 @@ void calculate_observables(coord* increment)
 
   if( sim_type == 1 ) {
     sumvsq = 0.0;
+
     for( int i=1; i<=nbead; i++ ) {
-      sumvsq += vel[i].x*vel[i].x
-	+ vel[i].y*vel[i].y
-	+ vel[i].z*vel[i].z;
+      sumvsq += vel[i].x*vel[i].x	+ vel[i].y*vel[i].y	+ vel[i].z*vel[i].z;
     }
     kinT = sumvsq/(3.0*double(nbead));
   } else if( sim_type == 2 ) {
@@ -412,13 +333,10 @@ void underdamped_iteration(coord* incr)
   // update_velocities
 
   for( int i=1; i<=nbead; i++ ) {
-
     // compute velocity increments
-
     vel[i].x = a3*incr[i].x + a4*force[i].x;
     vel[i].y = a3*incr[i].y + a4*force[i].y;
     vel[i].z = a3*incr[i].z + a4*force[i].z;
-
   }
 }
 
@@ -480,44 +398,7 @@ void overdamped_ctrl()
     }
   }
 
-  print_sim_params();
-  /*
-  if (neighborlist == 1) {
-    if(usegpu_nl == 0){
-      update_neighbor_list();
-    }else{
-      if(!strcmp(nl_algorithm,"RL")){
-        update_neighbor_list_RL();
-      }else if(!strcmp(nl_algorithm,"thrust")){
-        update_neighbor_list_thrust();
-      }else if(!strcmp(nl_algorithm,"CL")){
-        update_neighbor_list_CL();
-      }else{
-        cout << "INVALID ALGORITHM TYPE: " << nl_algorithm << endl;
-        exit(-1);
-      }
-    }
-
-    if(usegpu_pl == 0){
-      update_pair_list();
-    }else{
-      if(!strcmp(pl_algorithm,"RL")){
-        update_pair_list_RL();
-      }else if(!strcmp(pl_algorithm,"thrust")){
-        update_pair_list_thrust();
-      }else if(!strcmp(pl_algorithm,"CL")){
-        update_pair_list_CL();
-      }else{
-        cout << "INVALID ALGORITHM TYPE: " << pl_algorithm << endl;
-        exit(-1);
-      }
-    }
-  } else if (celllist == 1) {
-    update_cell_list();
-    update_pair_list();
-  }*/
-
-  /*
+  print_sim_params();  
   if(neighborlist == 1){
     run_neighbor_list_update();
     run_pair_list_update();
@@ -525,8 +406,6 @@ void overdamped_ctrl()
     run_cell_list_update();
     run_pair_list_update();
   }
-  */
-
 
   set_potential();
   set_forces();
@@ -544,10 +423,8 @@ void overdamped_ctrl()
   }
 
   if( first_time ) {
-
     energy_eval();
     force_eval();
-
   }
 
   if( binsave ) {
@@ -557,57 +434,16 @@ void overdamped_ctrl()
     while( istep <= nstep ) {
 
       // compute pair separation list
-      if ((inlup % nnlup) == 0) {
-        /*
-        if (neighborlist == 1) {
-          if(usegpu_nl == 0){
-            update_neighbor_list();
-          }else{
-            if(!strcmp(nl_algorithm,"RL")){
-              update_neighbor_list_RL();
-            }else if(!strcmp(nl_algorithm,"thrust")){
-              update_neighbor_list_thrust();
-            }else if(!strcmp(nl_algorithm,"CL")){
-              update_neighbor_list_CL();
-            }else{
-              cout << "INVALID ALGORITHM TYPE: " << nl_algorithm << endl;
-              exit(-1);
-            }
-          }
-        } else if (celllist == 1) {
-          update_cell_list();
-        }*/
-        
+      if ((inlup % nnlup) == 0) {        
         if(neighborlist == 1){
           run_neighbor_list_update();
         }else if(celllist == 1){
           run_cell_list_update();
         }
         
-	//	fprintf(stderr, "(%.0lf) neighbor list: (%d/%d)\n", istep, nnl_att, nnl_rep);
         inlup = 0;
       }
       inlup++;
-      /*
-      if (celllist == 1) {
-        update_pair_list();
-        //	fprintf(stderr, "(%.0lf) pair list: (%d/%d)\n", istep, nil_att, nil_rep);
-      }else if(neighborlist == 1){
-        if(usegpu_pl == 0){
-            update_pair_list();
-        }else{
-          if(!strcmp(pl_algorithm,"RL")){
-            update_pair_list_RL();
-          }else if(!strcmp(pl_algorithm,"thrust")){
-            update_pair_list_thrust();
-          }else if(!strcmp(pl_algorithm,"CL")){
-            update_pair_list_CL();
-          }else{
-            cout << "INVALID ALGORITHM TYPE: " << pl_algorithm << endl;
-            exit(-1);
-          }
-        }        
-      }*/
 
       if(neighborlist == 1 || celllist == 1){
         run_pair_list_update();
@@ -615,31 +451,142 @@ void overdamped_ctrl()
 
       overdamped_iteration(incr);
       if( !(iup%nup) ) { // updates
-	energy_eval();
-	calculate_observables(incr);
-        sprintf(oline,"%.0lf %f %f %f %f %f %f %f %d %f",
-                istep,T,kinT,e_bnd,e_ang_ss,e_vdw_rr,rna_etot,
-                Q,contct_nat,rgsq);
-	out << oline << endl;
-	iup = 0;
-	record_traj(binfname,uncbinfname);
-	save_coords(cfname,unccfname);
-	save_vels(vfname);
-	generator.save_state();
+	      energy_eval();
+	      calculate_observables(incr);
+        sprintf(oline,"%.0lf %f %f %f %f %f %f %f %d %f",istep,T,kinT,e_bnd,e_ang_ss,e_vdw_rr,rna_etot,Q,contct_nat,rgsq);
+	      out << oline << endl;
+        iup = 0;
+        record_traj(binfname,uncbinfname);
+        save_coords(cfname,unccfname);
+        save_vels(vfname);
+        generator.save_state();
       }
       istep += 1.0;
       iup++;
-
     }
     out.close();
   }
 
-  if( first_time ) first_time = 0;
+  if(first_time){
+    first_time = 0;
+  }
 
   delete [] incr;
 
   return;
+}
 
+void run_ctrl()
+{
+
+  using namespace std;
+
+  char oline[2048];
+  double istep = 1.0;
+  int iup = 1;
+  ofstream out(ufname,ios::out|ios::app);
+  static int first_time = 1;
+
+  coord* incr = new coord[nbead+1];
+
+  if( (!restart)&&first_time ) { // zero out the velocities and forces
+    for( int i=1; i<=nbead; i++ ) {
+      vel[i].x = 0.0;
+      vel[i].y = 0.0;
+      vel[i].z = 0.0;
+      force[i].x = 0.0;
+      force[i].y = 0.0;
+      force[i].z = 0.0;
+    }
+  }
+
+  print_sim_params();  
+  if(neighborlist == 1){
+    run_neighbor_list_update();
+    run_pair_list_update();
+  }else if(celllist == 1){
+    run_cell_list_update();
+    run_pair_list_update();
+  }
+
+  set_potential();
+  set_forces();
+
+  char line[2048];
+
+  if( restart ) {
+    load_coords(cfname,unccfname);
+    load_vels(vfname);
+    istep = istep_restart + 1.0;
+  }
+
+  if( rgen_restart ) {
+    generator.restart();
+  }
+
+  if( first_time ) {
+    energy_eval();
+    force_eval();
+  }
+
+  if( binsave ) {
+    if( (first_time)&&(!rgen_restart) ) {
+      record_traj(binfname,uncbinfname);
+    }
+    while( istep <= nstep ) {
+
+      // compute pair separation list
+      if ((inlup % nnlup) == 0) {        
+        if(neighborlist == 1){
+          run_neighbor_list_update();
+        }else if(celllist == 1){
+          run_cell_list_update();
+        }
+        
+        inlup = 0;
+      }
+      inlup++;
+
+      if(neighborlist == 1 || celllist == 1){
+        run_pair_list_update();
+      }
+
+      switch( sim_type ) {
+        case 1:
+          underdamped_iteration(incr);
+          break;
+        case 2:
+          overdamped_iteration(incr);
+          break;
+        default:
+          cerr << "UNRECOGNIZED SIM_TYPE!" << endl;
+          exit(-1);
+      }
+      
+      if( !(iup%nup) ) { // updates
+	      energy_eval();
+	      calculate_observables(incr);
+        sprintf(oline,"%.0lf %f %f %f %f %f %f %f %d %f",istep,T,kinT,e_bnd,e_ang_ss,e_vdw_rr,rna_etot,Q,contct_nat,rgsq);
+	      out << oline << endl;
+        iup = 0;
+        record_traj(binfname,uncbinfname);
+        save_coords(cfname,unccfname);
+        save_vels(vfname);
+        generator.save_state();
+      }
+      istep += 1.0;
+      iup++;
+    }
+    out.close();
+  }
+
+  if(first_time){
+    first_time = 0;
+  }
+
+  delete [] incr;
+
+  return;
 }
 
 void run_pair_list_update(){
@@ -762,13 +709,8 @@ void update_pair_list() {
       jbead_pair_list_rep[nil_rep] = jbead;
       itype_pair_list_rep[nil_rep] = itype;
       jtype_pair_list_rep[nil_rep] = jtype;
-      //printf("%d\n", 1);
-    }else{
-      //printf("%d\n", 0);
     }
   }
-  //fflush(stdout);
-  //exit(0);
 }
 
 
@@ -1129,7 +1071,7 @@ void compact_non_native_pl_thrust(int *value){
 }
 
 void update_pair_list_RL(){
-    // Declare N
+  // Declare N
 	int N;
 	
 	// Set N
@@ -1141,39 +1083,10 @@ void update_pair_list_RL(){
 	
 	// Calculate binary list for att
 	calculate_array_native_pl(ibead_neighbor_list_att, jbead_neighbor_list_att, itype_neighbor_list_att, jtype_neighbor_list_att, unc_pos, nl_lj_nat_pdb_dist, value, boxl, N);
-  
-    /*
-	// Compact ibead_pair_list_att
-	nil_att = compact(ibead_neighbor_list_att, value, N, ibead_pair_list_att)-1;
-	
-	// Compact jbead_pair_list_att
-	compact(jbead_neighbor_list_att, value, N, jbead_pair_list_att);
-	
-	// Compact itype_pair_list_att
-	compact(itype_neighbor_list_att, value, N, itype_pair_list_att);
-	
-	// Compact jtype_pair_list_att
-	compact(jtype_neighbor_list_att, value, N, jtype_pair_list_att);
-	
-	// Compact pl_lj_nat_pdb_dist
-	compact(nl_lj_nat_pdb_dist, value, N, pl_lj_nat_pdb_dist);
-	
-	// Compact pl_lj_nat_pdb_dist2
-	compact(nl_lj_nat_pdb_dist2, value, N, pl_lj_nat_pdb_dist2);
-	
-	// Compact pl_lj_nat_pdb_dist6
-	compact(nl_lj_nat_pdb_dist6, value, N, pl_lj_nat_pdb_dist6);
-	
-	// Compact pl_lj_nat_pdb_dist12
-	compact(nl_lj_nat_pdb_dist12, value, N, pl_lj_nat_pdb_dist12);*/
     
   nil_att = compact_native_pl(ibead_neighbor_list_att, jbead_neighbor_list_att, itype_neighbor_list_att, jtype_neighbor_list_att, nl_lj_nat_pdb_dist, nl_lj_nat_pdb_dist2, nl_lj_nat_pdb_dist6, nl_lj_nat_pdb_dist12, value, N, 
                   ibead_pair_list_att, jbead_pair_list_att, itype_pair_list_att, jtype_pair_list_att, pl_lj_nat_pdb_dist, pl_lj_nat_pdb_dist2,
                   pl_lj_nat_pdb_dist6, pl_lj_nat_pdb_dist12) - 1;
-
-  /*
-  printf("Native: %d\n", nil_att);
-  fflush(stdout);*/
 	
 	// Free value memory
 	free(value);
@@ -1194,31 +1107,9 @@ void update_pair_list_RL(){
 	
 	// Calculate binary list for rep
 	calculate_array_non_native_pl(ibead_neighbor_list_rep, jbead_neighbor_list_rep, itype_neighbor_list_rep, jtype_neighbor_list_rep, unc_pos, value, boxl, N);
-  /*
-  for(int i = 0; i <= N; i++){
-    printf("%d\n", value[i]);
-  }
-  fflush(stdout);
-  exit(0);*/
-
-    /*
-	// Compact ibead_pair_list_rep
-	nil_rep = compact(ibead_neighbor_list_rep, value, N, ibead_pair_list_rep)-1;
-	
-	// Compact jbead_pair_list_rep
-	compact(jbead_neighbor_list_rep, value, N, jbead_pair_list_rep);
-	
-	// Compact itype_pair_list_rep
-	compact(itype_neighbor_list_rep, value, N, itype_pair_list_rep);
-	
-	// Compact jtype_pair_list_rep
-	compact(jtype_neighbor_list_rep, value, N, jtype_pair_list_rep);*/
     
   nil_rep = compact_non_native_pl(ibead_neighbor_list_rep, jbead_neighbor_list_rep, itype_neighbor_list_rep, jtype_neighbor_list_rep, value, N, 
                   ibead_pair_list_rep, jbead_pair_list_rep, itype_pair_list_rep, jtype_pair_list_rep) - 1;
-  /*
-  printf("Non-Native: %d\n", nil_rep);
-  fflush(stdout);*/
 
   free(value);
 }
@@ -1386,23 +1277,9 @@ void calculate_array_non_native_pl(int *ibead_neighbor_list_rep, int *jbead_neig
 	// Compute binary array
 	array_non_native_pl_kernel<<<blocks, threads>>>(dev_ibead_neighbor_list_rep, dev_jbead_neighbor_list_rep, dev_itype_neighbor_list_rep, dev_jtype_neighbor_list_rep, 
                                                 dev_unc_pos, dev_value, boxl, N);
-    /*
-    cudaDeviceSynchronize();
-
-    // check for error
-    cudaError_t error = cudaGetLastError();
-    if(error != cudaSuccess)
-    {
-        // print the CUDA error message and exit
-        printf("CUDA error: %s\n", cudaGetErrorString(error));
-        exit(-1);
-    }else{
-        printf("Success\n");
-        exit(0);
-    }*/
 	
-    // Sync device
-    cudaDeviceSynchronize();
+  // Sync device
+  cudaDeviceSynchronize();
 
 	// Copy device array to host array
 	cudaMemcpy(value, dev_value, size_int, cudaMemcpyDeviceToHost);
@@ -1461,7 +1338,6 @@ __global__ void array_non_native_pl_kernel(int *dev_ibead_neighbor_list_rep, int
     This is based off of nl_lj_nat_pdb_dist[i], which is the distance 
     from ibead to jbead in the resulting folded structure
     */
-	// May need to change to dev_sigma_rep[N*itype + jtype]
     rcut = 2.5*dev_sigma_rep[itype][jtype];
 
     // square cutoff distance, since sqrt(d2) is computationally expensive
@@ -1512,151 +1388,21 @@ int compact_native_pl(int *ibead_neighbor_list_att, int *jbead_neighbor_list_att
     int threads = (int)min(N, SECTION_SIZE);
     int blocks = (int)ceil(1.0*N/SECTION_SIZE);
 
-    // Declare and allocate dev_result array to store compacted indices on device (on GPU)
-    int *dev_ibead_neighbor_list_att;
-    cudaMalloc((void**)&dev_ibead_neighbor_list_att, N*sizeof(int));
-    cudaMemcpy(dev_ibead_neighbor_list_att, ibead_neighbor_list_att, N*sizeof(int), cudaMemcpyHostToDevice);
-    int *dev_ibead_pair_list_att;
-    cudaMalloc((void**)&dev_ibead_pair_list_att, arrSize*sizeof(int));
-
-    copyElements<<<blocks, threads>>>(dev_ibead_neighbor_list_att, dev_value, dev_output, dev_ibead_pair_list_att, N);
-    cudaDeviceSynchronize();
-    free(ibead_pair_list_att);
-    ibead_pair_list_att = (int *)malloc(arrSize*sizeof(int));
-    cudaMemcpy(ibead_pair_list_att, dev_ibead_pair_list_att, arrSize*sizeof(int), cudaMemcpyDeviceToHost);
-
-    cudaDeviceSynchronize();
-    cudaFree(dev_ibead_neighbor_list_att);
-    cudaFree(dev_ibead_pair_list_att);
-
-    cudaDeviceSynchronize();
+    allocate_and_copy<int>(ibead_neighbor_list_att, dev_value, dev_output, N, arrSize, ibead_pair_list_att);
     
-    int *dev_jbead_neighbor_list_att;
-    cudaMalloc((void**)&dev_jbead_neighbor_list_att, N*sizeof(int));
-    cudaMemcpy(dev_jbead_neighbor_list_att, jbead_neighbor_list_att, N*sizeof(int), cudaMemcpyHostToDevice);
-    int *dev_jbead_pair_list_att;
-    cudaMalloc((void**)&dev_jbead_pair_list_att, arrSize*sizeof(int));
+    allocate_and_copy<int>(jbead_neighbor_list_att, dev_value, dev_output, N, arrSize, jbead_pair_list_att);
 
-    copyElements<<<blocks, threads>>>(dev_jbead_neighbor_list_att, dev_value, dev_output, dev_jbead_pair_list_att, N);
-    cudaDeviceSynchronize();
-    free(jbead_pair_list_att);
-    jbead_pair_list_att = (int *)malloc(arrSize*sizeof(int));
-    cudaMemcpy(jbead_pair_list_att, dev_jbead_pair_list_att, arrSize*sizeof(int), cudaMemcpyDeviceToHost); 
+    allocate_and_copy<int>(itype_neighbor_list_att, dev_value, dev_output, N, arrSize, itype_pair_list_att);
 
-    cudaDeviceSynchronize();
-    cudaFree(dev_jbead_neighbor_list_att);
-    cudaFree(dev_jbead_pair_list_att);
+    allocate_and_copy<int>(jtype_neighbor_list_att, dev_value, dev_output, N, arrSize, jtype_pair_list_att);
 
-    cudaDeviceSynchronize();
+    allocate_and_copy<double>(nl_lj_nat_pdb_dist, dev_value, dev_output, N, arrSize, pl_lj_nat_pdb_dist);
 
-    int *dev_itype_neighbor_list_att;
-    cudaMalloc((void**)&dev_itype_neighbor_list_att, N*sizeof(int));
-    cudaMemcpy(dev_itype_neighbor_list_att, itype_neighbor_list_att, N*sizeof(int), cudaMemcpyHostToDevice);
-    int *dev_itype_pair_list_att;
-    cudaMalloc((void**)&dev_itype_pair_list_att, arrSize*sizeof(int));
+    allocate_and_copy<double>(nl_lj_nat_pdb_dist2, dev_value, dev_output, N, arrSize, pl_lj_nat_pdb_dist2);
 
-    copyElements<<<blocks, threads>>>(dev_itype_neighbor_list_att, dev_value, dev_output, dev_itype_pair_list_att, N);
-    cudaDeviceSynchronize();
-    free(itype_pair_list_att);
-    itype_pair_list_att = (int *)malloc(arrSize*sizeof(int));
-    cudaMemcpy(itype_pair_list_att, dev_itype_pair_list_att, arrSize*sizeof(int), cudaMemcpyDeviceToHost); 
+    allocate_and_copy<double>(nl_lj_nat_pdb_dist6, dev_value, dev_output, N, arrSize, pl_lj_nat_pdb_dist6);
 
-    cudaDeviceSynchronize();
-    cudaFree(dev_itype_neighbor_list_att);
-    cudaFree(dev_itype_pair_list_att);
-
-    cudaDeviceSynchronize();
-
-
-    int *dev_jtype_neighbor_list_att;
-    cudaMalloc((void**)&dev_jtype_neighbor_list_att, N*sizeof(int));
-    cudaMemcpy(dev_jtype_neighbor_list_att, jtype_neighbor_list_att, N*sizeof(int), cudaMemcpyHostToDevice);
-    int *dev_jtype_pair_list_att;
-    cudaMalloc((void**)&dev_jtype_pair_list_att, arrSize*sizeof(int));
-
-    copyElements<<<blocks, threads>>>(dev_jtype_neighbor_list_att, dev_value, dev_output, dev_jtype_pair_list_att, N);
-    cudaDeviceSynchronize();
-    free(jtype_pair_list_att);
-    jtype_pair_list_att = (int *)malloc(arrSize*sizeof(int));
-    cudaMemcpy(jtype_pair_list_att, dev_jtype_pair_list_att, arrSize*sizeof(int), cudaMemcpyDeviceToHost); 
-
-    cudaDeviceSynchronize();
-    cudaFree(dev_jtype_neighbor_list_att);
-    cudaFree(dev_jtype_pair_list_att);
-
-    cudaDeviceSynchronize();
-
-    double *dev_nl_lj_nat_pdb_dist;
-    cudaMalloc((void**)&dev_nl_lj_nat_pdb_dist, N*sizeof(double));
-    cudaMemcpy(dev_nl_lj_nat_pdb_dist, nl_lj_nat_pdb_dist, N*sizeof(double), cudaMemcpyHostToDevice);
-    double *dev_pl_lj_nat_pdb_dist;
-    cudaMalloc((void**)&dev_pl_lj_nat_pdb_dist, arrSize*sizeof(double));
-
-    copyElements<<<blocks, threads>>>(dev_nl_lj_nat_pdb_dist, dev_value, dev_output, dev_pl_lj_nat_pdb_dist, N);
-    cudaDeviceSynchronize();
-    free(pl_lj_nat_pdb_dist);
-    pl_lj_nat_pdb_dist = (double *)malloc(arrSize*sizeof(double));
-    cudaMemcpy(pl_lj_nat_pdb_dist, dev_pl_lj_nat_pdb_dist, arrSize*sizeof(double), cudaMemcpyDeviceToHost); 
-
-    cudaDeviceSynchronize();
-    cudaFree(dev_nl_lj_nat_pdb_dist);
-    cudaFree(dev_pl_lj_nat_pdb_dist);
-
-    cudaDeviceSynchronize();
-
-    double *dev_nl_lj_nat_pdb_dist2;
-    cudaMalloc((void**)&dev_nl_lj_nat_pdb_dist2, N*sizeof(double));
-    cudaMemcpy(dev_nl_lj_nat_pdb_dist2, nl_lj_nat_pdb_dist2, N*sizeof(double), cudaMemcpyHostToDevice);
-    double *dev_pl_lj_nat_pdb_dist2;
-    cudaMalloc((void**)&dev_pl_lj_nat_pdb_dist2, arrSize*sizeof(double));
-
-    copyElements<<<blocks, threads>>>(dev_nl_lj_nat_pdb_dist2, dev_value, dev_output, dev_pl_lj_nat_pdb_dist2, N);
-    cudaDeviceSynchronize();
-    free(pl_lj_nat_pdb_dist2);
-    pl_lj_nat_pdb_dist2 = (double *)malloc(arrSize*sizeof(double));
-    cudaMemcpy(pl_lj_nat_pdb_dist2, dev_pl_lj_nat_pdb_dist2, arrSize*sizeof(double), cudaMemcpyDeviceToHost); 
-
-    cudaDeviceSynchronize();
-    cudaFree(dev_nl_lj_nat_pdb_dist2);
-    cudaFree(dev_pl_lj_nat_pdb_dist2);
-
-    cudaDeviceSynchronize();
-
-    double *dev_nl_lj_nat_pdb_dist6;
-    cudaMalloc((void**)&dev_nl_lj_nat_pdb_dist6, N*sizeof(double));
-    cudaMemcpy(dev_nl_lj_nat_pdb_dist6, nl_lj_nat_pdb_dist6, N*sizeof(double), cudaMemcpyHostToDevice);
-    double *dev_pl_lj_nat_pdb_dist6;
-    cudaMalloc((void**)&dev_pl_lj_nat_pdb_dist6, arrSize*sizeof(double));
-
-    copyElements<<<blocks, threads>>>(dev_nl_lj_nat_pdb_dist6, dev_value, dev_output, dev_pl_lj_nat_pdb_dist6, N);
-    cudaDeviceSynchronize();
-    free(pl_lj_nat_pdb_dist6);
-    pl_lj_nat_pdb_dist6 = (double *)malloc(arrSize*sizeof(double));
-    cudaMemcpy(pl_lj_nat_pdb_dist6, dev_pl_lj_nat_pdb_dist6, arrSize*sizeof(double), cudaMemcpyDeviceToHost); 
-
-    cudaDeviceSynchronize();
-    cudaFree(dev_nl_lj_nat_pdb_dist6);
-    cudaFree(dev_pl_lj_nat_pdb_dist6);
-
-    cudaDeviceSynchronize();
-
-    double *dev_nl_lj_nat_pdb_dist12;
-    cudaMalloc((void**)&dev_nl_lj_nat_pdb_dist12, N*sizeof(double));
-    cudaMemcpy(dev_nl_lj_nat_pdb_dist12, nl_lj_nat_pdb_dist12, N*sizeof(double), cudaMemcpyHostToDevice);
-    double *dev_pl_lj_nat_pdb_dist12;
-    cudaMalloc((void**)&dev_pl_lj_nat_pdb_dist12, arrSize*sizeof(double));
-
-    copyElements<<<blocks, threads>>>(dev_nl_lj_nat_pdb_dist12, dev_value, dev_output, dev_pl_lj_nat_pdb_dist12, N);
-    cudaDeviceSynchronize();
-    free(pl_lj_nat_pdb_dist12);
-    pl_lj_nat_pdb_dist12 = (double *)malloc(arrSize*sizeof(double));
-    cudaMemcpy(pl_lj_nat_pdb_dist12, dev_pl_lj_nat_pdb_dist12, arrSize*sizeof(double), cudaMemcpyDeviceToHost); 
-
-    cudaDeviceSynchronize();
-    cudaFree(dev_nl_lj_nat_pdb_dist12);
-    cudaFree(dev_pl_lj_nat_pdb_dist12);
-
-    cudaDeviceSynchronize();
+    allocate_and_copy<double>(nl_lj_nat_pdb_dist12, dev_value, dev_output, N, arrSize, pl_lj_nat_pdb_dist12);
 
     cudaFree(dev_value);
     cudaFree(dev_output);
@@ -1685,15 +1431,6 @@ int compact_non_native_pl(int *ibead_neighbor_list_rep, int *jbead_neighbor_list
     hier_ks_scan(dev_value, dev_output, N, 0);
 
     // Copy size of compacted array from device to host and store in arrSize
-    /* 
-     * TODO: If the entire array has 1 as the value, an exclusive scan will have N-1 as the last value in the array.
-     * However, allocating an array with N-1 entries will not store all N values from the index array.
-     * Change code to determine when we need to increment arrSize and when we don't.
-     * Options include:
-     *  1) Changing the hierarchical scan kernel to determine if the final value in the value array is 1
-     *  2) Checking to see if the final value is 1 in the value array
-     * Option 2 was selected, but please double-check this approach
-     */ 
     int arrSize;
     cudaMemcpy(&arrSize, &dev_output[N-1], sizeof(int), cudaMemcpyDeviceToHost); 
 
@@ -1705,81 +1442,13 @@ int compact_non_native_pl(int *ibead_neighbor_list_rep, int *jbead_neighbor_list
     int threads = (int)min(N, SECTION_SIZE);
     int blocks = (int)ceil(1.0*N/SECTION_SIZE);
 
-    // Declare and allocate dev_result array to store compacted indices on device (on GPU)
-    int *dev_ibead_neighbor_list_rep;
-    cudaMalloc((void**)&dev_ibead_neighbor_list_rep, N*sizeof(int));
-    cudaMemcpy(dev_ibead_neighbor_list_rep, ibead_neighbor_list_rep, N*sizeof(int), cudaMemcpyHostToDevice);
-    int *dev_ibead_pair_list_rep;
-    cudaMalloc((void**)&dev_ibead_pair_list_rep, arrSize*sizeof(int));
+    allocate_and_copy<int>(ibead_neighbor_list_rep, dev_value, dev_output, N, arrSize, ibead_pair_list_rep);
 
-    copyElements<<<blocks, threads>>>(dev_ibead_neighbor_list_rep, dev_value, dev_output, dev_ibead_pair_list_rep, N);
-    cudaDeviceSynchronize();
-    free(ibead_pair_list_rep);
-    ibead_pair_list_rep = (int *)malloc(arrSize*sizeof(int));
-    cudaMemcpy(ibead_pair_list_rep, dev_ibead_pair_list_rep, arrSize*sizeof(int), cudaMemcpyDeviceToHost);
+    allocate_and_copy<int>(jbead_neighbor_list_rep, dev_value, dev_output, N, arrSize, jbead_pair_list_rep);
 
-    cudaDeviceSynchronize();
-    cudaFree(dev_ibead_neighbor_list_rep);
-    cudaFree(dev_ibead_pair_list_rep);
+    allocate_and_copy<int>(itype_neighbor_list_rep, dev_value, dev_output, N, arrSize, itype_pair_list_rep);
 
-    cudaDeviceSynchronize();
-
-    
-    int *dev_jbead_neighbor_list_rep;
-    cudaMalloc((void**)&dev_jbead_neighbor_list_rep, N*sizeof(int));
-    cudaMemcpy(dev_jbead_neighbor_list_rep, jbead_neighbor_list_rep, N*sizeof(int), cudaMemcpyHostToDevice);
-    int *dev_jbead_pair_list_rep;
-    cudaMalloc((void**)&dev_jbead_pair_list_rep, arrSize*sizeof(int));
-
-    copyElements<<<blocks, threads>>>(dev_jbead_neighbor_list_rep, dev_value, dev_output, dev_jbead_pair_list_rep, N);
-    cudaDeviceSynchronize();
-    free(jbead_pair_list_rep);
-    jbead_pair_list_rep = (int *)malloc(arrSize*sizeof(int));
-    cudaMemcpy(jbead_pair_list_rep, dev_jbead_pair_list_rep, arrSize*sizeof(int), cudaMemcpyDeviceToHost); 
-
-    cudaDeviceSynchronize();
-    cudaFree(dev_jbead_neighbor_list_rep);
-    cudaFree(dev_jbead_pair_list_rep);
-
-    cudaDeviceSynchronize();
-
-
-    int *dev_itype_neighbor_list_rep;
-    cudaMalloc((void**)&dev_itype_neighbor_list_rep, N*sizeof(int));
-    cudaMemcpy(dev_itype_neighbor_list_rep, itype_neighbor_list_rep, N*sizeof(int), cudaMemcpyHostToDevice);
-    int *dev_itype_pair_list_rep;
-    cudaMalloc((void**)&dev_itype_pair_list_rep, arrSize*sizeof(int));
-
-    copyElements<<<blocks, threads>>>(dev_itype_neighbor_list_rep, dev_value, dev_output, dev_itype_pair_list_rep, N);
-    cudaDeviceSynchronize();
-    free(itype_pair_list_rep);
-    itype_pair_list_rep = (int *)malloc(arrSize*sizeof(int));
-    cudaMemcpy(itype_pair_list_rep, dev_itype_pair_list_rep, arrSize*sizeof(int), cudaMemcpyDeviceToHost); 
-
-    cudaDeviceSynchronize();
-    cudaFree(dev_itype_neighbor_list_rep);
-    cudaFree(dev_itype_pair_list_rep);
-
-    cudaDeviceSynchronize();
-
-
-    int *dev_jtype_neighbor_list_rep;
-    cudaMalloc((void**)&dev_jtype_neighbor_list_rep, N*sizeof(int));
-    cudaMemcpy(dev_jtype_neighbor_list_rep, jtype_neighbor_list_rep, N*sizeof(int), cudaMemcpyHostToDevice);
-    int *dev_jtype_pair_list_rep;
-    cudaMalloc((void**)&dev_jtype_pair_list_rep, arrSize*sizeof(int));
-
-    copyElements<<<blocks, threads>>>(dev_jtype_neighbor_list_rep, dev_value, dev_output, dev_jtype_pair_list_rep, N);
-    cudaDeviceSynchronize();
-    free(jtype_pair_list_rep);
-    jtype_pair_list_rep = (int *)malloc(arrSize*sizeof(int));
-    cudaMemcpy(jtype_pair_list_rep, dev_jtype_pair_list_rep, arrSize*sizeof(int), cudaMemcpyDeviceToHost); 
-
-    cudaDeviceSynchronize();
-    cudaFree(dev_jtype_neighbor_list_rep);
-    cudaFree(dev_jtype_pair_list_rep);
-
-    cudaDeviceSynchronize();
+    allocate_and_copy<int>(jtype_neighbor_list_rep, dev_value, dev_output, N, arrSize, jtype_pair_list_rep);
 
     cudaFree(dev_value);
     cudaFree(dev_output);

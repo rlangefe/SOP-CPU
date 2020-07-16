@@ -16,6 +16,7 @@ void ex_cmds(); // sequentially execute cmds found in input_file
 void simulation_ctrl();
 void underdamped_ctrl();
 void overdamped_ctrl();
+void run_ctrl();
 // void init_native();
 void underdamped_iteration(coord*);
 void overdamped_iteration(coord*);
