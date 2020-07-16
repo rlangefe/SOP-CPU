@@ -86,8 +86,7 @@ void ex_cmds()
      }
      // run simulation
      else if( !strcmp(cmd[i],"run") ) { 
-       //simulation_ctrl();
-       run_ctrl();
+       simulation_ctrl();
       }
      // ???
      else {};
