@@ -314,7 +314,7 @@ void vdw_forces()
 
     d2 = dx*dx+dy*dy+dz*dz;
     rep_tol = sigma_rep2[itype][jtype]*tol;
-    if( d2 < tol*lj_nat_pdb_dist2[i] ) continue;
+    if( d2 < tol*pl_lj_nat_pdb_dist2[i] ) continue;
     d6 = d2*d2*d2;
     d12 = d6*d6;
 
