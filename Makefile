@@ -17,7 +17,7 @@ global.o: ./global.h ./random_generator.h
 		$(CC) -c ./global.cu -o ./global.o
 
 energy.o: ./global.h ./energy.h
-		$(CC) -c ./energy.cu -o ./energy.o
+		$(CC) -lcusparse -c ./energy.cu -o ./energy.o
 
 io.o: ./global.h ./io.h
 		$(CC) -c ./io.cu -o ./io.o

@@ -134,9 +134,15 @@ void print_sim_params() {
   if (neighborlist == 1) {
     sprintf(oline,"Long-range Cutoff Type            : %s", "Neighbor List");
     cout << oline << endl;
+    
     sprintf(oline,"Neighbor List Update Frequency    : %d", nnlup);
     cout << oline << endl;
-    sprintf(oline,"Use GPU NL                        : %d", usegpu_nl);
+
+    if(usegpu_nl){
+      sprintf(oline,"Use GPU NL                        : %s", "Yes");
+    }else{
+      sprintf(oline,"Use GPU NL                        : %s", "No");
+    }
     cout << oline << endl;
 
     if(usegpu_nl == 1){
@@ -156,7 +162,11 @@ void print_sim_params() {
       }
     }
     
-    sprintf(oline,"Use GPU PL                        : %d", usegpu_pl);
+    if(usegpu_pl){
+      sprintf(oline,"Use GPU PL                        : %s", "Yes");
+    }else{
+      sprintf(oline,"Use GPU PL                        : %s", "No");
+    }
     cout << oline << endl;
 
     if(usegpu_pl == 1){
@@ -189,10 +199,20 @@ void print_sim_params() {
     cout << oline << endl;
   }
 
-  sprintf(oline,"Use GPU VDW Energy                : %d", usegpu_vdw_energy);
-  cout << oline << endl;
+  if(usegpu_vdw_energy){
+    sprintf(oline,"Use GPU VDW Energy                : %s", "Yes");
+  }else{
+    sprintf(oline,"Use GPU VDW Energy                : %s", "No");
+  }
   
-  sprintf(oline,"Use GPU VDW Force                 : %d", usegpu_vdw_force);
+  cout << oline << endl;
+
+  if(usegpu_vdw_force){
+    sprintf(oline,"Use GPU VDW Force                 : %s", "Yes");
+  }else{
+    sprintf(oline,"Use GPU VDW Force                 : %s", "Yes");
+  }
+  
   cout << oline << endl;
 
   cout << endl;

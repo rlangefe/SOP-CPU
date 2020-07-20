@@ -1,10 +1,33 @@
 #include <cstdlib>
 #include <math.h>
 #include <cstdio>
+#include <cuda_runtime.h>
+#include <cusparse.h>
 #include "global.h"
 #include "energy.h"
+#include <stdlib.h> 
 
 #define SECTION_SIZE 1024
+
+#define CHECK_CUDA(func)                                                       \
+{                                                                              \
+    cudaError_t status = (func);                                               \
+    if (status != cudaSuccess) {                                               \
+        printf("CUDA API failed at line %d with error: %s (%d)\n",             \
+               __LINE__, cudaGetErrorString(status), status);                  \
+        return EXIT_FAILURE;                                                   \
+    }                                                                          \
+}                                                                              
+
+#define CHECK_CUSPARSE(func)                                                   \
+{                                                                              \
+    cusparseStatus_t status = (func);                                          \
+    if (status != CUSPARSE_STATUS_SUCCESS) {                                   \
+        printf("CUSPARSE API failed at line %d with error: %s (%d)\n",         \
+               __LINE__, cusparseGetErrorString(status), status);              \
+        return EXIT_FAILURE;                                                   \
+    }                                                                          \
+}
 
 __device__ __constant__ double dev_coeff_att[3][3] = { 
   {0.0, 0.0, 0.0},
@@ -142,7 +165,7 @@ void set_forces()
         if(usegpu_vdw_energy == 0){
 	        force_term[++iterm] = &vdw_forces;
         }else{
-          force_term[++iterm] = &vdw_forces_gpu;
+          force_term[++iterm] = &vdw_forces_matrix_gpu;
         }
       }
       break;
@@ -895,7 +918,7 @@ __global__ void sumIt (double *Y, double *S, int InputSize) {
 void vdw_forces_gpu()
 {
   using namespace std;
-  
+
   vdw_forces_att_gpu();
 
   vdw_forces_rep_gpu();
@@ -914,7 +937,7 @@ void vdw_forces_att_gpu(){
 	
 	int size_int = N*sizeof(int);
 	int size_double = N*sizeof(double);
-	int size_double3 = N*sizeof(double3);
+	int size_double3 = nbead*sizeof(double3);
 	
 	cudaMalloc((void **)&dev_ibead_pair_list_att, size_int);
 	cudaMalloc((void **)&dev_jbead_pair_list_att, size_int);
@@ -1036,7 +1059,7 @@ void vdw_forces_rep_gpu(){
 	int N = nil_rep + 1;
 	
 	int size_int = N*sizeof(int);
-	int size_double3 = N*sizeof(double3);
+	int size_double3 = nbead*sizeof(double3);
 	
 	cudaMalloc((void **)&dev_ibead_pair_list_rep, size_int);
 	cudaMalloc((void **)&dev_jbead_pair_list_rep, size_int);
@@ -1146,5 +1169,451 @@ __global__ void vdw_forces_rep_kernel(int *dev_ibead_pair_list_rep, int *dev_jbe
 		//dev_force[jbead].z -= fz;
 		atomicAdd(&dev_force[jbead].z, -1.0*fz);
 
+	}
+}
+
+void vdw_forces_matrix_gpu()
+{
+	using namespace std;
+
+	double *values_x = (double *)malloc(nil_att+1);
+	double *values_y = (double *)malloc(nil_att+1);
+	double *values_z = (double *)malloc(nil_att+1);
+
+	vdw_forces_att_values_gpu(values_x, values_y, values_z);
+
+	vdw_sum_forces(values_x, ibead_pair_list_att, jbead_pair_list_att, 1);
+	vdw_sum_forces(values_y, ibead_pair_list_att, jbead_pair_list_att, 2);
+	vdw_sum_forces(values_z, ibead_pair_list_att, jbead_pair_list_att, 3);
+
+	free(values_x);
+	free(values_y);
+	free(values_z);
+
+
+	values_x = (double *)malloc(nil_rep+1);
+	values_y = (double *)malloc(nil_rep+1);
+	values_z = (double *)malloc(nil_rep+1);
+
+	vdw_forces_rep_values_gpu(values_x, values_y, values_z);
+
+	vdw_sum_forces(values_x, ibead_pair_list_rep, jbead_pair_list_rep, 1);
+	vdw_sum_forces(values_y, ibead_pair_list_rep, jbead_pair_list_rep, 2);
+	vdw_sum_forces(values_z, ibead_pair_list_rep, jbead_pair_list_rep, 3);
+
+	free(values_x);
+	free(values_y);
+	free(values_z);
+}
+
+void vdw_forces_att_values_gpu(double *values_x, double *values_y, double *values_z){
+	int *dev_ibead_pair_list_att;
+	int *dev_jbead_pair_list_att;
+	int *dev_itype_pair_list_att;
+	int *dev_jtype_pair_list_att;
+	double *dev_pl_lj_nat_pdb_dist;
+	double3 *dev_unc_pos;
+	
+	double *dev_values_x;
+	double *dev_values_y;
+	double *dev_values_z;
+	
+	int N = nil_att + 1;
+	
+	int size_int = N*sizeof(int);
+	int size_double = N*sizeof(double);
+	int size_double3 = N*sizeof(double3);
+	
+	cudaMalloc((void **)&dev_ibead_pair_list_att, size_int);
+	cudaMalloc((void **)&dev_jbead_pair_list_att, size_int);
+	cudaMalloc((void **)&dev_itype_pair_list_att, size_int);
+	cudaMalloc((void **)&dev_jtype_pair_list_att, size_int);
+	cudaMalloc((void **)&dev_pl_lj_nat_pdb_dist, size_double);
+	cudaMalloc((void **)&dev_values_x, size_double);
+	cudaMalloc((void **)&dev_values_y, size_double);
+	cudaMalloc((void **)&dev_values_z, size_double);
+	cudaMalloc((void **)&dev_unc_pos, size_double3);
+	
+	cudaMemcpy(dev_ibead_pair_list_att, ibead_pair_list_att, size_int, cudaMemcpyHostToDevice);
+	cudaMemcpy(dev_jbead_pair_list_att, jbead_pair_list_att, size_int, cudaMemcpyHostToDevice);
+	cudaMemcpy(dev_itype_pair_list_att, itype_pair_list_att, size_int, cudaMemcpyHostToDevice);
+	cudaMemcpy(dev_jtype_pair_list_att, jtype_pair_list_att, size_int, cudaMemcpyHostToDevice);
+	cudaMemcpy(dev_pl_lj_nat_pdb_dist, pl_lj_nat_pdb_dist, size_double, cudaMemcpyHostToDevice);
+	cudaMemcpy(dev_unc_pos, unc_pos, size_double3, cudaMemcpyHostToDevice);
+	
+	int threads = (int)min(N, SECTION_SIZE);
+	int blocks = (int)ceil(1.0*N/SECTION_SIZE);
+	
+	vdw_forces_att_values_kernel<<<blocks, threads>>>(dev_ibead_pair_list_att, dev_jbead_pair_list_att, dev_itype_pair_list_att, dev_jtype_pair_list_att, 
+												dev_pl_lj_nat_pdb_dist, boxl, N, dev_unc_pos, dev_values_x, dev_values_y, dev_values_z);
+												
+	cudaMemcpy(values_x, dev_values_x, size_double, cudaMemcpyDeviceToHost);
+	cudaMemcpy(values_y, dev_values_y, size_double, cudaMemcpyDeviceToHost);
+	cudaMemcpy(values_z, dev_values_z, size_double, cudaMemcpyDeviceToHost);
+										
+	cudaFree(dev_ibead_pair_list_att);
+	cudaFree(dev_jbead_pair_list_att);
+	cudaFree(dev_itype_pair_list_att);
+	cudaFree(dev_jtype_pair_list_att);
+	cudaFree(dev_pl_lj_nat_pdb_dist);
+	cudaFree(dev_unc_pos);
+	cudaFree(dev_values_x);
+	cudaFree(dev_values_y);
+	cudaFree(dev_values_z);
+}
+
+__global__ void vdw_forces_att_values_kernel(int *dev_ibead_pair_list_att, int *dev_jbead_pair_list_att, int *dev_itype_pair_list_att, int *dev_jtype_pair_list_att, 
+								double *dev_pl_lj_nat_pdb_dist, double boxl, int N, double3 *dev_unc_pos, double *dev_values_x, double *dev_values_y, double *dev_values_z){
+									
+	int i = blockIdx.x * blockDim.x + threadIdx.x;
+	
+	if(i > 0 && i < N){
+		int ibead,jbead;
+		int itype,jtype;
+		double dx,dy,dz,d,d2,d6,d12;
+		double fx,fy,fz;
+		double co1;
+		const static double tol = 1.0e-7;
+
+		ibead = dev_ibead_pair_list_att[i];
+		jbead = dev_jbead_pair_list_att[i];
+		itype = dev_itype_pair_list_att[i];
+		jtype = dev_jtype_pair_list_att[i];
+
+		dx = dev_unc_pos[jbead].x - dev_unc_pos[ibead].x;
+		dy = dev_unc_pos[jbead].y - dev_unc_pos[ibead].y;
+		dz = dev_unc_pos[jbead].z - dev_unc_pos[ibead].z;
+
+		// apply periodic boundary conditions to dx, dy, and dz
+		//dx -= boxl*rnd(dx/boxl);
+		double rnd_value;
+
+		rnd_value = ( ((dx/boxl)>0) ? std::floor((dx/boxl)+0.5) : std::ceil((dx/boxl)-0.5) );
+		dx -= boxl*rnd_value;
+
+		//dy -= boxl*rnd(dy/boxl);
+		rnd_value = ( ((dy/boxl)>0) ? std::floor((dy/boxl)+0.5) : std::ceil((dy/boxl)-0.5) );
+		dy -= boxl*rnd_value;
+
+		//dz -= boxl*rnd(dz/boxl);
+		rnd_value = ( ((dz/boxl)>0) ? std::floor((dz/boxl)+0.5) : std::ceil((dz/boxl)-0.5) );
+		dz -= boxl*rnd_value;
+
+		// compute square of distance between ibead and jbead
+		d2 = dx*dx+dy*dy+dz*dz;
+		
+		double pl_dist2 = dev_pl_lj_nat_pdb_dist[i] * dev_pl_lj_nat_pdb_dist[i];
+		
+		if( d2 < tol*pl_dist2 ) return;
+		d6 = d2*d2*d2;
+		d12 = d6*d6;
+
+		double pl_dist6 = pl_dist2 * pl_dist2 * pl_dist2;
+
+		double pl_dist12 = pl_dist6 * pl_dist6;
+
+		co1 = dev_force_coeff_att[itype][jtype]/d2*((pl_dist12/d12)-(pl_dist6/d6));
+
+		fx = co1*dx;
+		fy = co1*dy;
+		fz = co1*dz;
+		
+		dev_values_x[i] = fx;
+		dev_values_y[i] = fy;
+		dev_values_z[i] = fz;
+		
+	}else if(i == 0){
+		dev_values_x[i] = 0;
+		dev_values_y[i] = 0;
+		dev_values_z[i] = 0;
+	}
+}
+
+void vdw_forces_rep_values_gpu(double *values_x, double *values_y, double *values_z){
+	int *dev_ibead_pair_list_rep;
+	int *dev_jbead_pair_list_rep;
+	int *dev_itype_pair_list_rep;
+	int *dev_jtype_pair_list_rep;
+	double3 *dev_unc_pos;
+	double3 *dev_force;
+	
+	double *dev_values_x;
+	double *dev_values_y;
+	double *dev_values_z;
+	
+	int N = nil_rep + 1;
+	
+	int size_int = N*sizeof(int);
+	int size_double3 = N*sizeof(double3);
+	int size_double = N*sizeof(double);
+	
+	cudaMalloc((void **)&dev_ibead_pair_list_rep, size_int);
+	cudaMalloc((void **)&dev_jbead_pair_list_rep, size_int);
+	cudaMalloc((void **)&dev_itype_pair_list_rep, size_int);
+	cudaMalloc((void **)&dev_jtype_pair_list_rep, size_int);
+	cudaMalloc((void **)&dev_unc_pos, size_double3);
+	cudaMalloc((void **)&dev_force, size_double3);
+	
+	cudaMalloc((void **)&dev_values_x, size_double);
+	cudaMalloc((void **)&dev_values_y, size_double);
+	cudaMalloc((void **)&dev_values_z, size_double);
+	
+	cudaMemcpy(dev_ibead_pair_list_rep, ibead_pair_list_rep, size_int, cudaMemcpyHostToDevice);
+	cudaMemcpy(dev_jbead_pair_list_rep, jbead_pair_list_rep, size_int, cudaMemcpyHostToDevice);
+	cudaMemcpy(dev_itype_pair_list_rep, itype_pair_list_rep, size_int, cudaMemcpyHostToDevice);
+	cudaMemcpy(dev_jtype_pair_list_rep, jtype_pair_list_rep, size_int, cudaMemcpyHostToDevice);
+	
+	cudaMemcpy(dev_unc_pos, unc_pos, size_double3, cudaMemcpyHostToDevice);
+	cudaMemcpy(dev_force, force, size_double3, cudaMemcpyHostToDevice);
+	
+	int threads = (int)min(N, SECTION_SIZE);
+	int blocks = (int)ceil(1.0*N/SECTION_SIZE);
+	
+	vdw_forces_rep_values_kernel<<<blocks, threads>>>(dev_ibead_pair_list_rep, dev_jbead_pair_list_rep, dev_itype_pair_list_rep, dev_jtype_pair_list_rep, 
+												boxl, N, dev_unc_pos, dev_values_x, dev_values_y, dev_values_z);
+										
+										
+	cudaMemcpy(values_x, dev_values_x, size_double, cudaMemcpyDeviceToHost);
+	cudaMemcpy(values_y, dev_values_y, size_double, cudaMemcpyDeviceToHost);
+	cudaMemcpy(values_z, dev_values_z, size_double, cudaMemcpyDeviceToHost);
+	
+	cudaFree(dev_ibead_pair_list_rep);
+	cudaFree(dev_jbead_pair_list_rep);
+	cudaFree(dev_itype_pair_list_rep);
+	cudaFree(dev_jtype_pair_list_rep);
+	cudaFree(dev_unc_pos);
+	cudaFree(dev_values_x);
+	cudaFree(dev_values_y);
+	cudaFree(dev_values_z);
+}
+
+__global__ void vdw_forces_rep_values_kernel(int *dev_ibead_pair_list_rep, int *dev_jbead_pair_list_rep, int *dev_itype_pair_list_rep, int *dev_jtype_pair_list_rep, double boxl, int N,
+								double3 *dev_unc_pos, double *dev_values_x, double *dev_values_y, double *dev_values_z){
+									
+	int i = blockIdx.x * blockDim.x + threadIdx.x;
+
+	if(i > 0 && i < N) {
+		int ibead,jbead;
+		int itype,jtype;
+		double dx,dy,dz,d,d2,d6,d12;
+		double fx,fy,fz;
+		double co1;
+		const static double tol = 1.0e-7;
+		double rep_tol;
+
+		ibead = dev_ibead_pair_list_rep[i];
+		jbead = dev_jbead_pair_list_rep[i];
+		itype = dev_itype_pair_list_rep[i];
+		jtype = dev_jtype_pair_list_rep[i];
+
+		dx = dev_unc_pos[jbead].x - dev_unc_pos[ibead].x;
+		dy = dev_unc_pos[jbead].y - dev_unc_pos[ibead].y;
+		dz = dev_unc_pos[jbead].z - dev_unc_pos[ibead].z;
+
+		// apply periodic boundary conditions to dx, dy, and dz
+		//dx -= boxl*rnd(dx/boxl);
+		double rnd_value;
+
+		rnd_value = ( ((dx/boxl)>0) ? std::floor((dx/boxl)+0.5) : std::ceil((dx/boxl)-0.5) );
+		dx -= boxl*rnd_value;
+
+		//dy -= boxl*rnd(dy/boxl);
+		rnd_value = ( ((dy/boxl)>0) ? std::floor((dy/boxl)+0.5) : std::ceil((dy/boxl)-0.5) );
+		dy -= boxl*rnd_value;
+
+		//dz -= boxl*rnd(dz/boxl);
+		rnd_value = ( ((dz/boxl)>0) ? std::floor((dz/boxl)+0.5) : std::ceil((dz/boxl)-0.5) );
+		dz -= boxl*rnd_value;
+
+		// compute square of distance between ibead and jbead
+		d2 = dx*dx+dy*dy+dz*dz;
+
+		double s2 = dev_sigma_rep[itype][jtype] * dev_sigma_rep[itype][jtype];
+			
+		rep_tol = s2*tol;
+
+		if( d2 <  rep_tol ) return;
+		d6 = d2*d2*d2;
+		d12 = d6*d6;
+
+		double s6 = s2*s2*s2;
+		double s12 = s6*s6;
+
+		co1 = dev_force_coeff_rep[itype][jtype]/d2 * (2.0*s12/d12+s6/d6);
+
+		fx = co1*dx;
+		fy = co1*dy;
+		fz = co1*dz;
+
+		dev_values_x[i] = fx;
+		dev_values_y[i] = fy;
+		dev_values_z[i] = fz;
+
+	}else if(i == 0){
+		dev_values_x[i] = 0;
+		dev_values_y[i] = 0;
+		dev_values_z[i] = 0;
+	}
+}
+
+void vdw_sum_forces(double *values, int *ibead, int *jbead, int direction){	
+	int A_num_rows = nbead;
+	int A_num_cols = nbead;
+	int A_num_nnz  = nil_att+1;
+	double alpha = 1.0;
+  double beta  = 0.0;
+	
+	int   *dev_ibead, *dev_jbead;
+  double *dev_values, *dX, *dY;
+  CHECK_CUDA( cudaMalloc((void**) &dev_ibead,  A_num_nnz*sizeof(int)))
+  CHECK_CUDA( cudaMalloc((void**) &dev_jbead,  A_num_nnz * sizeof(int))    )
+  CHECK_CUDA( cudaMalloc((void**) &dev_values, A_num_nnz * sizeof(double))  )
+  CHECK_CUDA( cudaMalloc((void**) &dX,         A_num_cols * sizeof(double)) )
+  CHECK_CUDA( cudaMalloc((void**) &dY,         A_num_rows * sizeof(double)) )
+
+  CHECK_CUDA( cudaMemcpy(dev_ibead, ibead, A_num_nnz * sizeof(int), cudaMemcpyHostToDevice) )
+
+  CHECK_CUDA( cudaMemcpy(dev_jbead, jbead, A_num_nnz * sizeof(int), cudaMemcpyHostToDevice) )
+  CHECK_CUDA( cudaMemcpy(dev_values, values, A_num_nnz * sizeof(double), cudaMemcpyHostToDevice) )
+    
+	
+	
+	int threads = (int)min(A_num_cols, SECTION_SIZE);
+	int blocks = (int)ceil(1.0*A_num_cols/SECTION_SIZE);
+	
+	fill_with<<<blocks, threads>>>(dX, A_num_cols, 1.0);
+	
+	
+	cusparseHandle_t     handle = 0;
+  cusparseSpMatDescr_t matA;
+  cusparseDnVecDescr_t vecX, vecY;
+  void*  dBuffer    = NULL;
+  size_t bufferSize = 0;
+  CHECK_CUSPARSE( cusparseCreate(&handle) )
+  // Create sparse matrix A in CSR format
+  CHECK_CUSPARSE( cusparseCreateCoo(&matA, A_num_rows, A_num_cols, A_num_nnz,
+                                    dev_ibead, dev_jbead, dA_values,
+                                    CUSPARSE_INDEX_32I, CUSPARSE_INDEX_BASE_ZERO,
+                                    CUDA_R_64F) )
+  // Create dense vector X
+  CHECK_CUSPARSE( cusparseCreateDnVec(&vecX, A_num_cols, dX, CUDA_R_64F) )
+  // Create dense vector y
+  CHECK_CUSPARSE( cusparseCreateDnVec(&vecY, A_num_rows, dY, CUDA_R_64F) )
+  // allocate an external buffer if needed
+  CHECK_CUSPARSE( cusparseSpMV_bufferSize(
+                                handle, CUSPARSE_OPERATION_NON_TRANSPOSE,
+                                &alpha, matA, vecX, &beta, vecY, CUDA_R_64F,
+                                CUSPARSE_MV_ALG_DEFAULT, &bufferSize) )
+
+  CHECK_CUDA( cudaMalloc(&dBuffer, bufferSize) )
+
+  // execute SpMV
+  CHECK_CUSPARSE( cusparseSpMV(handle, CUSPARSE_OPERATION_NON_TRANSPOSE,
+                                &alpha, matA, vecX, &beta, vecY, CUDA_R_64F,
+                                CUSPARSE_MV_ALG_DEFAULT, dBuffer) )
+
+  // destroy matrix/vector descriptors
+  CHECK_CUSPARSE( cusparseDestroySpMat(matA) )
+  CHECK_CUSPARSE( cusparseDestroyDnVec(vecX) )
+  CHECK_CUSPARSE( cusparseDestroyDnVec(vecY) )
+  CHECK_CUSPARSE( cusparseDestroy(handle) )
+	
+	
+	int size_double3 = nbead*sizeof(double3);
+	
+	double3 *dev_force;
+	
+	cudaMalloc((void **)&dev_force, size_double3);
+	
+	cudaMemcpy(dev_force, force, size_double3, cudaMemcpyHostToDevice);
+	
+	threads = (int)min(A_num_rows, SECTION_SIZE);
+	blocks = (int)ceil(1.0*A_num_rows/SECTION_SIZE);
+	
+	vdw_forces_kernel<<<blocks, threads>>>(dY, A_num_rows, dev_force, direction);
+	
+	
+	
+	
+	threads = (int)min(A_num_cols, SECTION_SIZE);
+	blocks = (int)ceil(1.0*A_num_cols/SECTION_SIZE);
+	
+	fill_with<<<blocks, threads>>>(dX, A_num_cols, -1.0);
+	
+	
+	handle = 0;
+  matA;
+  vecX, vecY;
+  dBuffer    = NULL;
+  bufferSize = 0;
+  CHECK_CUSPARSE( cusparseCreate(&handle) )
+  // Create sparse matrix A in CSR format
+  CHECK_CUSPARSE( cusparseCreateCoo(&matA, A_num_rows, A_num_cols, A_num_nnz,
+                                    dev_jbead, dev_ibead, dA_values,
+                                    CUSPARSE_INDEX_32I, CUSPARSE_INDEX_BASE_ZERO,
+                                    CUDA_R_64F) )
+  // Create dense vector X
+  CHECK_CUSPARSE( cusparseCreateDnVec(&vecX, A_num_cols, dX, CUDA_R_64F) )
+  // Create dense vector y
+  CHECK_CUSPARSE( cusparseCreateDnVec(&vecY, A_num_rows, dY, CUDA_R_64F) )
+  // allocate an external buffer if needed
+  CHECK_CUSPARSE( cusparseSpMV_bufferSize(
+                                handle, CUSPARSE_OPERATION_NON_TRANSPOSE,
+                                &alpha, matA, vecX, &beta, vecY, CUDA_R_64F,
+                                CUSPARSE_MV_ALG_DEFAULT, &bufferSize) )
+  CHECK_CUDA( cudaMalloc(&dBuffer, bufferSize) )
+
+  // execute SpMV
+  CHECK_CUSPARSE( cusparseSpMV(handle, CUSPARSE_OPERATION_NON_TRANSPOSE,
+                                &alpha, matA, vecX, &beta, vecY, CUDA_R_64F,
+                                CUSPARSE_MV_ALG_DEFAULT, dBuffer) )
+
+  // destroy matrix/vector descriptors
+  CHECK_CUSPARSE( cusparseDestroySpMat(matA) )
+  CHECK_CUSPARSE( cusparseDestroyDnVec(vecX) )
+  CHECK_CUSPARSE( cusparseDestroyDnVec(vecY) )
+  CHECK_CUSPARSE( cusparseDestroy(handle) )
+	
+	
+	size_double3 = nbead*sizeof(double3);
+	
+	threads = (int)min(A_num_rows, SECTION_SIZE);
+	blocks = (int)ceil(1.0*A_num_rows/SECTION_SIZE);
+	
+	vdw_forces_kernel<<<blocks, threads>>>(dY, A_num_rows, dev_force, direction);
+	
+	
+	
+	
+	cudaMemcpy(force, dev_force, size_double3, cudaMemcpyDeviceToHost);	
+	
+	cudaFree(dev_force);
+}
+
+__global__ void vdw_forces_kernel(double *dY, int size, double3 *dev_force, int direction){
+	// direction=1 -> x
+	// direction=2 -> y
+	// direction=3 -> z
+	
+	int i = blockIdx.x * blockDim.x + threadIdx.x;
+	
+	if(i > 0 && i < size){
+		if(dY[i] != 0){
+			if(direction == 1){
+				dev_force[i].x+= dY[i];
+			}else if(direction == 2){
+				dev_force[i].y+= dY[i];
+			}else if(direction == 3){
+				dev_force[i].z+= dY[i];
+			}
+		}
+	}
+}
+
+__global__ void fill_with(double *dX, int size, double val){
+	int i = blockIdx.x * blockDim.x + threadIdx.x;
+	
+	if(i < size){
+		dX[i] = val;
 	}
 }
