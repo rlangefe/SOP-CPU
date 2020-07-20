@@ -648,7 +648,7 @@ void vdw_energy_rep_gpu(){
 	cudaMemcpy(dev_unc_pos, unc_pos, size_double3, cudaMemcpyHostToDevice);
 	
 	int threads = (int)min(N, SECTION_SIZE);
-    int blocks = (int)ceil(1.0*N/SECTION_SIZE);
+  int blocks = (int)ceil(1.0*N/SECTION_SIZE);
 	
 	vdw_energy_rep_value_kernel<<<blocks, threads>>>(dev_ibead_pair_list_rep, dev_jbead_pair_list_rep, dev_itype_pair_list_rep, dev_jtype_pair_list_rep, 
 													                        dev_unc_pos, N, boxl, dev_result);
@@ -706,9 +706,9 @@ __global__ void vdw_energy_rep_value_kernel(int *dev_ibead_pair_list_rep, int *d
 		d12 = d6*d6;
 
     double s = dev_sigma_rep[itype][jtype];
-
-    double s6 = s*s*s*s*s*s;
-    double s12 = s*s*s*s*s*s*s*s*s*s*s*s;
+    double s2 = s*s;
+    double s6 = s2*s2*s2;
+    double s12 = s6*s6;
 		
     dev_result[i] = dev_coeff_rep[itype][jtype] * (s12/d12 + s6/d6);
 	}else if(i == 0){
