@@ -153,7 +153,8 @@ extern int sim_type; // integration scheme 1 = underdamped; 2 = overdamped
 extern double T; // temperature (kcal/mol)
 extern int usegpu_nl;
 extern int usegpu_pl;
-extern int usegpu_vdw;
+extern int usegpu_vdw_energy;
+extern int usegpu_vdw_force;
 extern int neighborlist; // neighbor list cutoff method?
 extern int celllist; // cell list cutoff method?
 extern double minT; // minimum temperature determines crowder cutoffs

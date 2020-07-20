@@ -1,17 +1,18 @@
 #include <cstdlib>
 #include <math.h>
+#include <cstdio>
 #include "global.h"
 #include "energy.h"
 
 #define SECTION_SIZE 1024
 
-__device__ double dev_coeff_att[3][3] = { 
+__device__ __constant__ double dev_coeff_att[3][3] = { 
   {0.0, 0.0, 0.0},
   {0.0, 0.7, 0.8},
   {0.0, 0.8, 1.0} 
 };
 
-__device__ double dev_coeff_rep[3][3] = { 
+__device__ __constant__ double dev_coeff_rep[3][3] = { 
   {0.0, 0.0, 0.0},
   {0.0, 1.0, 1.0},
   {0.0, 1.0, 1.0} 
@@ -21,6 +22,18 @@ __device__ __constant__ double dev_sigma_rep[3][3] = {
 	{0.0, 0.0, 0.0},
 	{0.0, 3.8, 5.4},
 	{0.0, 5.4, 7.0}
+};
+
+__device__ __constant__ double dev_force_coeff_att[3][3] = { 
+  {0.0,       0.0,       0.0},
+  {0.0, -12.0*1.0, -12.0*0.8},
+	{0.0, -12.0*0.8, -12.0*0.7}
+};
+
+__device__ double dev_force_coeff_rep[3][3] = {
+  {0.0,       0.0,       0.0},
+	{0.0,  -6.0*1.0,  -6.0*1.0},
+	{0.0,  -6.0*1.0,  -6.0*1.0}
 };
 
 void energy_eval()
@@ -75,18 +88,18 @@ void set_potential() {
     switch(i) {
     case 1:
       if( pot_term_on[i] ) {
-	pot_term[++iterm] = &fene_energy;
+	      pot_term[++iterm] = &fene_energy;
       }
       break;
     case 2:
       if( pot_term_on[i] ) {
-	pot_term[++iterm] = &soft_sphere_angular_energy;
+	      pot_term[++iterm] = &soft_sphere_angular_energy;
       }
       break;
     case 5:
       if( pot_term_on[i] ) {
-        if(usegpu_vdw == 0){
-	pot_term[++iterm] = &vdw_energy;
+        if(usegpu_vdw_energy == 0){
+	        pot_term[++iterm] = &vdw_energy;
         }else{
           pot_term[++iterm] = &vdw_energy_gpu;
         }
@@ -111,22 +124,26 @@ void set_forces()
     switch(i) {
     case 1:
       if( force_term_on[i] ) {
-	force_term[++iterm] = &random_force;
+	      force_term[++iterm] = &random_force;
       }
       break;
     case 2:
       if( force_term_on[i] ) {
-	force_term[++iterm] = &fene_forces;
+	      force_term[++iterm] = &fene_forces;
       }
       break;
     case 3:
       if( force_term_on[i] ) {
-	force_term[++iterm] = &soft_sphere_angular_forces;
+	      force_term[++iterm] = &soft_sphere_angular_forces;
       }
       break;
     case 6:
       if( force_term_on[i] ) {
-	force_term[++iterm] = &vdw_forces;
+        if(usegpu_vdw_energy == 0){
+	        force_term[++iterm] = &vdw_forces;
+        }else{
+          force_term[++iterm] = &vdw_forces_gpu;
+        }
       }
       break;
     default:
@@ -313,7 +330,7 @@ void vdw_forces()
     dz -= boxl*rnd(dz/boxl);
 
     d2 = dx*dx+dy*dy+dz*dz;
-    rep_tol = sigma_rep2[itype][jtype]*tol;
+    
     if( d2 < tol*pl_lj_nat_pdb_dist2[i] ) continue;
     d6 = d2*d2*d2;
     d12 = d6*d6;
@@ -352,6 +369,7 @@ void vdw_forces()
     dz -= boxl*rnd(dz/boxl);
 
     d2 = dx*dx+dy*dy+dz*dz;
+    rep_tol = sigma_rep2[itype][jtype]*tol;
     if( d2 <  rep_tol ) continue;
     d6 = d2*d2*d2;
     d12 = d6*d6;
@@ -874,3 +892,259 @@ __global__ void sumIt (double *Y, double *S, int InputSize) {
     }
 }
 
+void vdw_forces_gpu()
+{
+  using namespace std;
+  
+  vdw_forces_att_gpu();
+
+  vdw_forces_rep_gpu();
+}
+
+void vdw_forces_att_gpu(){
+	int *dev_ibead_pair_list_att;
+	int *dev_jbead_pair_list_att;
+	int *dev_itype_pair_list_att;
+	int *dev_jtype_pair_list_att;
+	double *dev_pl_lj_nat_pdb_dist;
+	double3 *dev_unc_pos;
+	double3 *dev_force;
+	
+	int N = nil_att + 1;
+	
+	int size_int = N*sizeof(int);
+	int size_double = N*sizeof(double);
+	int size_double3 = N*sizeof(double3);
+	
+	cudaMalloc((void **)&dev_ibead_pair_list_att, size_int);
+	cudaMalloc((void **)&dev_jbead_pair_list_att, size_int);
+	cudaMalloc((void **)&dev_itype_pair_list_att, size_int);
+	cudaMalloc((void **)&dev_jtype_pair_list_att, size_int);
+	cudaMalloc((void **)&dev_pl_lj_nat_pdb_dist, size_double);
+	cudaMalloc((void **)&dev_unc_pos, size_double3);
+	cudaMalloc((void **)&dev_force, size_double3);
+	
+	cudaMemcpy(dev_ibead_pair_list_att, ibead_pair_list_att, size_int, cudaMemcpyHostToDevice);
+	cudaMemcpy(dev_jbead_pair_list_att, jbead_pair_list_att, size_int, cudaMemcpyHostToDevice);
+	cudaMemcpy(dev_itype_pair_list_att, itype_pair_list_att, size_int, cudaMemcpyHostToDevice);
+	cudaMemcpy(dev_jtype_pair_list_att, jtype_pair_list_att, size_int, cudaMemcpyHostToDevice);
+	cudaMemcpy(dev_pl_lj_nat_pdb_dist, pl_lj_nat_pdb_dist, size_double, cudaMemcpyHostToDevice);
+	cudaMemcpy(dev_unc_pos, unc_pos, size_double3, cudaMemcpyHostToDevice);
+	cudaMemcpy(dev_force, force, size_double3, cudaMemcpyHostToDevice);
+	
+	int threads = (int)min(N, SECTION_SIZE);
+	int blocks = (int)ceil(1.0*N/SECTION_SIZE);
+	
+	vdw_forces_att_kernel<<<blocks, threads>>>(dev_ibead_pair_list_att, dev_jbead_pair_list_att, dev_itype_pair_list_att, dev_jtype_pair_list_att, 
+												dev_pl_lj_nat_pdb_dist, boxl, N, dev_unc_pos, dev_force);
+												
+	cudaMemcpy(force, dev_force, size_double3, cudaMemcpyDeviceToHost);
+										
+	cudaFree(dev_ibead_pair_list_att);
+	cudaFree(dev_jbead_pair_list_att);
+	cudaFree(dev_itype_pair_list_att);
+	cudaFree(dev_jtype_pair_list_att);
+	cudaFree(dev_pl_lj_nat_pdb_dist);
+	cudaFree(dev_unc_pos);
+	cudaFree(dev_force);
+}
+
+__global__ void vdw_forces_att_kernel(int *dev_ibead_pair_list_att, int *dev_jbead_pair_list_att, int *dev_itype_pair_list_att, int *dev_jtype_pair_list_att, 
+								double *dev_pl_lj_nat_pdb_dist, double boxl, int N, double3 *dev_unc_pos, double3 *dev_force){
+									
+	int i = blockIdx.x * blockDim.x + threadIdx.x;
+	
+	if(i > 0 && i < N){
+		int ibead,jbead;
+		int itype,jtype;
+		double dx,dy,dz,d,d2,d6,d12;
+		double fx,fy,fz;
+		double co1;
+		const static double tol = 1.0e-7;
+
+		ibead = dev_ibead_pair_list_att[i];
+		jbead = dev_jbead_pair_list_att[i];
+		itype = dev_itype_pair_list_att[i];
+		jtype = dev_jtype_pair_list_att[i];
+
+		dx = dev_unc_pos[jbead].x - dev_unc_pos[ibead].x;
+		dy = dev_unc_pos[jbead].y - dev_unc_pos[ibead].y;
+		dz = dev_unc_pos[jbead].z - dev_unc_pos[ibead].z;
+
+		// apply periodic boundary conditions to dx, dy, and dz
+		//dx -= boxl*rnd(dx/boxl);
+		double rnd_value;
+
+		rnd_value = ( ((dx/boxl)>0) ? std::floor((dx/boxl)+0.5) : std::ceil((dx/boxl)-0.5) );
+		dx -= boxl*rnd_value;
+
+		//dy -= boxl*rnd(dy/boxl);
+		rnd_value = ( ((dy/boxl)>0) ? std::floor((dy/boxl)+0.5) : std::ceil((dy/boxl)-0.5) );
+		dy -= boxl*rnd_value;
+
+		//dz -= boxl*rnd(dz/boxl);
+		rnd_value = ( ((dz/boxl)>0) ? std::floor((dz/boxl)+0.5) : std::ceil((dz/boxl)-0.5) );
+		dz -= boxl*rnd_value;
+
+		// compute square of distance between ibead and jbead
+		d2 = dx*dx+dy*dy+dz*dz;
+		
+		double pl_dist2 = dev_pl_lj_nat_pdb_dist[i] * dev_pl_lj_nat_pdb_dist[i];
+		
+		if( d2 < tol*pl_dist2 ) return;
+		d6 = d2*d2*d2;
+		d12 = d6*d6;
+
+		double pl_dist6 = pl_dist2 * pl_dist2 * pl_dist2;
+
+		double pl_dist12 = pl_dist6 * pl_dist6;
+
+		co1 = dev_force_coeff_att[itype][jtype]/d2*((pl_dist12/d12)-(pl_dist6/d6));
+
+		fx = co1*dx;
+		fy = co1*dy;
+		fz = co1*dz;
+
+		//dev_force[ibead].x += fx;
+		atomicAdd(&dev_force[ibead].x, fx);
+		
+		//dev_force[ibead].y += fy;
+		atomicAdd(&dev_force[ibead].y, fy);
+		
+		//dev_force[ibead].z += fz;
+		atomicAdd(&dev_force[ibead].z, fz);
+
+		//dev_force[jbead].x -= fx;
+		atomicAdd(&dev_force[jbead].x, -1.0*fx);
+		
+		//dev_force[jbead].y -= fy;
+		atomicAdd(&dev_force[jbead].y, -1.0*fy);
+		
+		//dev_force[jbead].z -= fz;
+		atomicAdd(&dev_force[jbead].z, -1.0*fz);
+	}
+}
+
+void vdw_forces_rep_gpu(){
+	int *dev_ibead_pair_list_rep;
+	int *dev_jbead_pair_list_rep;
+	int *dev_itype_pair_list_rep;
+	int *dev_jtype_pair_list_rep;
+	double3 *dev_unc_pos;
+	double3 *dev_force;
+	
+	int N = nil_rep + 1;
+	
+	int size_int = N*sizeof(int);
+	int size_double3 = N*sizeof(double3);
+	
+	cudaMalloc((void **)&dev_ibead_pair_list_rep, size_int);
+	cudaMalloc((void **)&dev_jbead_pair_list_rep, size_int);
+	cudaMalloc((void **)&dev_itype_pair_list_rep, size_int);
+	cudaMalloc((void **)&dev_jtype_pair_list_rep, size_int);
+	cudaMalloc((void **)&dev_unc_pos, size_double3);
+	cudaMalloc((void **)&dev_force, size_double3);
+	
+	cudaMemcpy(dev_ibead_pair_list_rep, ibead_pair_list_rep, size_int, cudaMemcpyHostToDevice);
+	cudaMemcpy(dev_jbead_pair_list_rep, jbead_pair_list_rep, size_int, cudaMemcpyHostToDevice);
+	cudaMemcpy(dev_itype_pair_list_rep, itype_pair_list_rep, size_int, cudaMemcpyHostToDevice);
+	cudaMemcpy(dev_jtype_pair_list_rep, jtype_pair_list_rep, size_int, cudaMemcpyHostToDevice);
+	
+	cudaMemcpy(dev_unc_pos, unc_pos, size_double3, cudaMemcpyHostToDevice);
+	cudaMemcpy(dev_force, force, size_double3, cudaMemcpyHostToDevice);
+	
+	int threads = (int)min(N, SECTION_SIZE);
+	int blocks = (int)ceil(1.0*N/SECTION_SIZE);
+	
+	vdw_forces_rep_kernel<<<blocks, threads>>>(dev_ibead_pair_list_rep, dev_jbead_pair_list_rep, dev_itype_pair_list_rep, dev_jtype_pair_list_rep, 
+												boxl, N, dev_unc_pos, dev_force);
+										
+										
+	cudaMemcpy(force, dev_force, size_double3, cudaMemcpyDeviceToHost);
+	
+	cudaFree(dev_ibead_pair_list_rep);
+	cudaFree(dev_jbead_pair_list_rep);
+	cudaFree(dev_itype_pair_list_rep);
+	cudaFree(dev_jtype_pair_list_rep);
+	cudaFree(dev_unc_pos);
+	cudaFree(dev_force);
+}
+
+__global__ void vdw_forces_rep_kernel(int *dev_ibead_pair_list_rep, int *dev_jbead_pair_list_rep, int *dev_itype_pair_list_rep, int *dev_jtype_pair_list_rep, double boxl, int N,
+								double3 *dev_unc_pos, double3 *dev_force){
+									
+	int i = blockIdx.x * blockDim.x + threadIdx.x;
+
+	if(i > 0 && i < N) {
+		int ibead,jbead;
+		int itype,jtype;
+		double dx,dy,dz,d,d2,d6,d12;
+		double fx,fy,fz;
+		double co1;
+		const static double tol = 1.0e-7;
+		double rep_tol;
+
+		ibead = dev_ibead_pair_list_rep[i];
+		jbead = dev_jbead_pair_list_rep[i];
+		itype = dev_itype_pair_list_rep[i];
+		jtype = dev_jtype_pair_list_rep[i];
+
+		dx = dev_unc_pos[jbead].x - dev_unc_pos[ibead].x;
+		dy = dev_unc_pos[jbead].y - dev_unc_pos[ibead].y;
+		dz = dev_unc_pos[jbead].z - dev_unc_pos[ibead].z;
+
+		// apply periodic boundary conditions to dx, dy, and dz
+		//dx -= boxl*rnd(dx/boxl);
+		double rnd_value;
+
+		rnd_value = ( ((dx/boxl)>0) ? std::floor((dx/boxl)+0.5) : std::ceil((dx/boxl)-0.5) );
+		dx -= boxl*rnd_value;
+
+		//dy -= boxl*rnd(dy/boxl);
+		rnd_value = ( ((dy/boxl)>0) ? std::floor((dy/boxl)+0.5) : std::ceil((dy/boxl)-0.5) );
+		dy -= boxl*rnd_value;
+
+		//dz -= boxl*rnd(dz/boxl);
+		rnd_value = ( ((dz/boxl)>0) ? std::floor((dz/boxl)+0.5) : std::ceil((dz/boxl)-0.5) );
+		dz -= boxl*rnd_value;
+
+		// compute square of distance between ibead and jbead
+		d2 = dx*dx+dy*dy+dz*dz;
+
+		double s2 = dev_sigma_rep[itype][jtype] * dev_sigma_rep[itype][jtype];
+			
+		rep_tol = s2*tol;
+
+		if( d2 <  rep_tol ) return;
+		d6 = d2*d2*d2;
+		d12 = d6*d6;
+
+		double s6 = s2*s2*s2;
+		double s12 = s6*s6;
+
+		co1 = dev_force_coeff_rep[itype][jtype]/d2 * (2.0*s12/d12+s6/d6);
+
+		fx = co1*dx;
+		fy = co1*dy;
+		fz = co1*dz;
+
+		//dev_force[ibead].x += fx;
+		atomicAdd(&dev_force[ibead].x, fx);
+		
+		//dev_force[ibead].y += fy;
+		atomicAdd(&dev_force[ibead].y, fy);
+		
+		//dev_force[ibead].z += fz;
+		atomicAdd(&dev_force[ibead].z, fz);
+
+		//dev_force[jbead].x -= fx;
+		atomicAdd(&dev_force[jbead].x, -1.0*fx);
+		
+		//dev_force[jbead].y -= fy;
+		atomicAdd(&dev_force[jbead].y, -1.0*fy);
+		
+		//dev_force[jbead].z -= fz;
+		atomicAdd(&dev_force[jbead].z, -1.0*fz);
+
+	}
+}

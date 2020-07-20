@@ -170,7 +170,8 @@ int sim_type = 1; // integration scheme; default is underdamped
 double T; // temperature
 int usegpu_nl = 0;
 int usegpu_pl = 0;
-int usegpu_vdw = 0;
+int usegpu_vdw_energy = 0;
+int usegpu_vdw_force = 0;
 int neighborlist = 0; // neighbor list cutoff method?
 int celllist = 0; // cell list cutoff method?
 double boxl; // Length of an edge of the simulation box

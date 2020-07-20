@@ -189,7 +189,10 @@ void print_sim_params() {
     cout << oline << endl;
   }
 
-  sprintf(oline,"Use GPU VDW                       : %d", usegpu_vdw);
+  sprintf(oline,"Use GPU VDW Energy                : %d", usegpu_vdw_energy);
+  cout << oline << endl;
+  
+  sprintf(oline,"Use GPU VDW Force                 : %d", usegpu_vdw_force);
   cout << oline << endl;
 
   cout << endl;
