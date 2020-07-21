@@ -142,7 +142,7 @@ void set_forces()
       break;
     case 6:
       if( force_term_on[i] ) {
-        if(usegpu_vdw_energy == 0){
+        if(usegpu_vdw_force == 0){
 	        force_term[++iterm] = &vdw_forces;
         }else{
           force_term[++iterm] = &vdw_forces_matrix_gpu;
