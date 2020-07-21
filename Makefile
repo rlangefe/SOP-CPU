@@ -5,7 +5,7 @@ OBJS = ./sop.o ./random_generator.o ./global.o ./energy.o ./io.o ./params.o ./ne
 
 sop.x: $(OBJS)
 	@echo "linking ..."
-	$(CC) -o $(EFILE) $(OBJS)
+	$(CC) -lcusparse -o $(EFILE) $(OBJS)
 
 sop.o: ./sop.h ./random_generator.h ./global.h ./energy.h ./io.h ./params.h ./neighbor_list.h ./cell_list.o ./pair_list.h
 	$(CC) -c ./sop.cu -o ./sop.o
@@ -17,7 +17,7 @@ global.o: ./global.h ./random_generator.h
 		$(CC) -c ./global.cu -o ./global.o
 
 energy.o: ./global.h ./energy.h
-		$(CC) -lcusparse -c ./energy.cu -o ./energy.o
+		$(CC) -lcusparse -lcudart -c ./energy.cu -o ./energy.o
 
 io.o: ./global.h ./io.h
 		$(CC) -c ./io.cu -o ./io.o

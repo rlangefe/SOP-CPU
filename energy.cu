@@ -9,26 +9,6 @@
 
 #define SECTION_SIZE 1024
 
-#define CHECK_CUDA(func)                                                       \
-{                                                                              \
-    cudaError_t status = (func);                                               \
-    if (status != cudaSuccess) {                                               \
-        printf("CUDA API failed at line %d with error: %s (%d)\n",             \
-               __LINE__, cudaGetErrorString(status), status);                  \
-        return EXIT_FAILURE;                                                   \
-    }                                                                          \
-}                                                                              
-
-#define CHECK_CUSPARSE(func)                                                   \
-{                                                                              \
-    cusparseStatus_t status = (func);                                          \
-    if (status != CUSPARSE_STATUS_SUCCESS) {                                   \
-        printf("CUSPARSE API failed at line %d with error: %s (%d)\n",         \
-               __LINE__, cusparseGetErrorString(status), status);              \
-        return EXIT_FAILURE;                                                   \
-    }                                                                          \
-}
-
 __device__ __constant__ double dev_coeff_att[3][3] = { 
   {0.0, 0.0, 0.0},
   {0.0, 0.7, 0.8},
@@ -556,9 +536,9 @@ void vdw_energy_att_gpu(){
 	int size_double3 = (nbead + 1)*sizeof(double3);
 
 	int *dev_ibead_pair_list_att;
-  int *dev_jbead_pair_list_att;
-  int *dev_itype_pair_list_att;
-  int *dev_jtype_pair_list_att;
+	int *dev_jbead_pair_list_att;
+	int *dev_itype_pair_list_att;
+	int *dev_jtype_pair_list_att;
 	double *dev_pl_lj_nat_pdb_dist6;
 	double *dev_pl_lj_nat_pdb_dist12;
 	
@@ -588,7 +568,7 @@ void vdw_energy_att_gpu(){
 	cudaMemcpy(dev_unc_pos, unc_pos, size_double3, cudaMemcpyHostToDevice);
 	
 	int threads = (int)min(N, SECTION_SIZE);
-  int blocks = (int)ceil(1.0*N/SECTION_SIZE);
+  	int blocks = (int)ceil(1.0*N/SECTION_SIZE);
 	
 	vdw_energy_att_value_kernel<<<blocks, threads>>>(dev_ibead_pair_list_att, dev_jbead_pair_list_att, dev_itype_pair_list_att, dev_jtype_pair_list_att, 
 														dev_pl_lj_nat_pdb_dist6, dev_pl_lj_nat_pdb_dist12, dev_unc_pos, N, boxl, dev_result);
@@ -598,9 +578,9 @@ void vdw_energy_att_gpu(){
 	cudaMemcpy(&e_vdw_rr_att, &dev_result[N-1], sizeof(double), cudaMemcpyDeviceToHost);
 	
 	cudaFree(dev_ibead_pair_list_att);
-  cudaFree(dev_jbead_pair_list_att);
-  cudaFree(dev_itype_pair_list_att);
-  cudaFree(dev_jtype_pair_list_att);
+	cudaFree(dev_jbead_pair_list_att);
+	cudaFree(dev_itype_pair_list_att);
+	cudaFree(dev_jtype_pair_list_att);
 	cudaFree(dev_pl_lj_nat_pdb_dist6);
 	cudaFree(dev_pl_lj_nat_pdb_dist12);
 	
@@ -1180,11 +1160,19 @@ void vdw_forces_matrix_gpu()
 	double *values_y = (double *)malloc(nil_att+1);
 	double *values_z = (double *)malloc(nil_att+1);
 
+	printf("Allocate Values\n");
+	fflush(stdout);
+
 	vdw_forces_att_values_gpu(values_x, values_y, values_z);
 
-	vdw_sum_forces(values_x, ibead_pair_list_att, jbead_pair_list_att, 1);
-	vdw_sum_forces(values_y, ibead_pair_list_att, jbead_pair_list_att, 2);
-	vdw_sum_forces(values_z, ibead_pair_list_att, jbead_pair_list_att, 3);
+	printf("Start Summing Forces\n");
+	fflush(stdout);
+
+	int N = nil_att+1;
+
+	vdw_sum_forces(values_x, ibead_pair_list_att, jbead_pair_list_att, 1, N);
+	vdw_sum_forces(values_y, ibead_pair_list_att, jbead_pair_list_att, 2, N);
+	vdw_sum_forces(values_z, ibead_pair_list_att, jbead_pair_list_att, 3, N);
 
 	free(values_x);
 	free(values_y);
@@ -1197,9 +1185,11 @@ void vdw_forces_matrix_gpu()
 
 	vdw_forces_rep_values_gpu(values_x, values_y, values_z);
 
-	vdw_sum_forces(values_x, ibead_pair_list_rep, jbead_pair_list_rep, 1);
-	vdw_sum_forces(values_y, ibead_pair_list_rep, jbead_pair_list_rep, 2);
-	vdw_sum_forces(values_z, ibead_pair_list_rep, jbead_pair_list_rep, 3);
+	N = nil_rep+1;
+
+	vdw_sum_forces(values_x, ibead_pair_list_rep, jbead_pair_list_rep, 1, N);
+	vdw_sum_forces(values_y, ibead_pair_list_rep, jbead_pair_list_rep, 2, N);
+	vdw_sum_forces(values_z, ibead_pair_list_rep, jbead_pair_list_rep, 3, N);
 
 	free(values_x);
 	free(values_y);
@@ -1207,6 +1197,8 @@ void vdw_forces_matrix_gpu()
 }
 
 void vdw_forces_att_values_gpu(double *values_x, double *values_y, double *values_z){
+	printf("Attractive Values\n");
+	fflush(stdout);
 	int *dev_ibead_pair_list_att;
 	int *dev_jbead_pair_list_att;
 	int *dev_itype_pair_list_att;
@@ -1223,6 +1215,9 @@ void vdw_forces_att_values_gpu(double *values_x, double *values_y, double *value
 	int size_int = N*sizeof(int);
 	int size_double = N*sizeof(double);
 	int size_double3 = N*sizeof(double3);
+
+	printf("\tCUDA Malloc\n");
+	fflush(stdout);
 	
 	cudaMalloc((void **)&dev_ibead_pair_list_att, size_int);
 	cudaMalloc((void **)&dev_jbead_pair_list_att, size_int);
@@ -1234,6 +1229,9 @@ void vdw_forces_att_values_gpu(double *values_x, double *values_y, double *value
 	cudaMalloc((void **)&dev_values_z, size_double);
 	cudaMalloc((void **)&dev_unc_pos, size_double3);
 	
+	printf("\tCUDA Memcpy\n");
+	fflush(stdout);
+
 	cudaMemcpy(dev_ibead_pair_list_att, ibead_pair_list_att, size_int, cudaMemcpyHostToDevice);
 	cudaMemcpy(dev_jbead_pair_list_att, jbead_pair_list_att, size_int, cudaMemcpyHostToDevice);
 	cudaMemcpy(dev_itype_pair_list_att, itype_pair_list_att, size_int, cudaMemcpyHostToDevice);
@@ -1243,10 +1241,16 @@ void vdw_forces_att_values_gpu(double *values_x, double *values_y, double *value
 	
 	int threads = (int)min(N, SECTION_SIZE);
 	int blocks = (int)ceil(1.0*N/SECTION_SIZE);
+
+	printf("\tStart Attractive Value Kernel\n");
+	fflush(stdout);
 	
 	vdw_forces_att_values_kernel<<<blocks, threads>>>(dev_ibead_pair_list_att, dev_jbead_pair_list_att, dev_itype_pair_list_att, dev_jtype_pair_list_att, 
 												dev_pl_lj_nat_pdb_dist, boxl, N, dev_unc_pos, dev_values_x, dev_values_y, dev_values_z);
-												
+
+	printf("\tEnd Attractive Value Kernel\n");
+	fflush(stdout);
+
 	cudaMemcpy(values_x, dev_values_x, size_double, cudaMemcpyDeviceToHost);
 	cudaMemcpy(values_y, dev_values_y, size_double, cudaMemcpyDeviceToHost);
 	cudaMemcpy(values_z, dev_values_z, size_double, cudaMemcpyDeviceToHost);
@@ -1365,6 +1369,14 @@ void vdw_forces_rep_values_gpu(double *values_x, double *values_y, double *value
 	
 	cudaMemcpy(dev_unc_pos, unc_pos, size_double3, cudaMemcpyHostToDevice);
 	cudaMemcpy(dev_force, force, size_double3, cudaMemcpyHostToDevice);
+
+	cudaError_t error = cudaGetLastError();
+	if(error != cudaSuccess)
+	{
+		// print the CUDA error message and exit
+		printf("CUDA error: %s\n", cudaGetErrorString(error));
+		exit(-1);
+	}
 	
 	int threads = (int)min(N, SECTION_SIZE);
 	int blocks = (int)ceil(1.0*N/SECTION_SIZE);
@@ -1372,7 +1384,15 @@ void vdw_forces_rep_values_gpu(double *values_x, double *values_y, double *value
 	vdw_forces_rep_values_kernel<<<blocks, threads>>>(dev_ibead_pair_list_rep, dev_jbead_pair_list_rep, dev_itype_pair_list_rep, dev_jtype_pair_list_rep, 
 												boxl, N, dev_unc_pos, dev_values_x, dev_values_y, dev_values_z);
 										
-										
+	
+	error = cudaGetLastError();
+	if(error != cudaSuccess)
+	{
+		// print the CUDA error message and exit
+		printf("CUDA error: %s\n", cudaGetErrorString(error));
+		exit(-1);
+	}
+
 	cudaMemcpy(values_x, dev_values_x, size_double, cudaMemcpyDeviceToHost);
 	cudaMemcpy(values_y, dev_values_y, size_double, cudaMemcpyDeviceToHost);
 	cudaMemcpy(values_z, dev_values_z, size_double, cudaMemcpyDeviceToHost);
@@ -1456,67 +1476,95 @@ __global__ void vdw_forces_rep_values_kernel(int *dev_ibead_pair_list_rep, int *
 	}
 }
 
-void vdw_sum_forces(double *values, int *ibead, int *jbead, int direction){	
+void vdw_sum_forces(double *values, int *ibead, int *jbead, int direction, int N){	
 	int A_num_rows = nbead;
 	int A_num_cols = nbead;
-	int A_num_nnz  = nil_att+1;
+	int A_num_nnz  = N;
 	double alpha = 1.0;
-  double beta  = 0.0;
-	
+	double beta  = 0.0;
+		
 	int   *dev_ibead, *dev_jbead;
-  double *dev_values, *dX, *dY;
-  CHECK_CUDA( cudaMalloc((void**) &dev_ibead,  A_num_nnz*sizeof(int)))
-  CHECK_CUDA( cudaMalloc((void**) &dev_jbead,  A_num_nnz * sizeof(int))    )
-  CHECK_CUDA( cudaMalloc((void**) &dev_values, A_num_nnz * sizeof(double))  )
-  CHECK_CUDA( cudaMalloc((void**) &dX,         A_num_cols * sizeof(double)) )
-  CHECK_CUDA( cudaMalloc((void**) &dY,         A_num_rows * sizeof(double)) )
+	double *dev_values, *dX, *dY;
 
-  CHECK_CUDA( cudaMemcpy(dev_ibead, ibead, A_num_nnz * sizeof(int), cudaMemcpyHostToDevice) )
+	printf("\tAllocate Device Arrays\n");
+	fflush(stdout);
 
-  CHECK_CUDA( cudaMemcpy(dev_jbead, jbead, A_num_nnz * sizeof(int), cudaMemcpyHostToDevice) )
-  CHECK_CUDA( cudaMemcpy(dev_values, values, A_num_nnz * sizeof(double), cudaMemcpyHostToDevice) )
+	cudaMalloc((void**) &dev_ibead,  A_num_nnz*sizeof(int));
+	cudaMalloc((void**) &dev_jbead,  A_num_nnz * sizeof(int));
+	cudaMalloc((void**) &dev_values, A_num_nnz * sizeof(double));
+	cudaMalloc((void**) &dX,         A_num_cols * sizeof(double));
+	cudaMalloc((void**) &dY,         A_num_rows * sizeof(double));
+
+	printf("\tCUDA Memcpy Device Arrays\n");
+	fflush(stdout);
+
+	cudaMemcpy(dev_ibead, ibead, A_num_nnz * sizeof(int), cudaMemcpyHostToDevice);
+
+	cudaMemcpy(dev_jbead, jbead, A_num_nnz * sizeof(int), cudaMemcpyHostToDevice);
+	cudaMemcpy(dev_values, values, A_num_nnz * sizeof(double), cudaMemcpyHostToDevice);
     
 	
 	
 	int threads = (int)min(A_num_cols, SECTION_SIZE);
 	int blocks = (int)ceil(1.0*A_num_cols/SECTION_SIZE);
+
+	printf("\tFill dX Kernel\n");
+	fflush(stdout);
 	
-	fill_with<<<blocks, threads>>>(dX, A_num_cols, 1.0);
+	//fill_with<<<blocks, threads>>>(dX, A_num_cols, 1.0);
+	cudaMemset(dX, 1.0, A_num_cols * sizeof(double));
 	
+	// check for error
+	cudaError_t error = cudaGetLastError();
+	if(error != cudaSuccess)
+	{
+		// print the CUDA error message and exit
+		printf("CUDA error: %s\n", cudaGetErrorString(error));
+		exit(-1);
+	}
 	
+	printf("\tBegin Matrix Operations\n");
+	fflush(stdout);
+
 	cusparseHandle_t     handle = 0;
-  cusparseSpMatDescr_t matA;
-  cusparseDnVecDescr_t vecX, vecY;
-  void*  dBuffer    = NULL;
-  size_t bufferSize = 0;
-  CHECK_CUSPARSE( cusparseCreate(&handle) )
-  // Create sparse matrix A in CSR format
-  CHECK_CUSPARSE( cusparseCreateCoo(&matA, A_num_rows, A_num_cols, A_num_nnz,
-                                    dev_ibead, dev_jbead, dA_values,
-                                    CUSPARSE_INDEX_32I, CUSPARSE_INDEX_BASE_ZERO,
-                                    CUDA_R_64F) )
-  // Create dense vector X
-  CHECK_CUSPARSE( cusparseCreateDnVec(&vecX, A_num_cols, dX, CUDA_R_64F) )
-  // Create dense vector y
-  CHECK_CUSPARSE( cusparseCreateDnVec(&vecY, A_num_rows, dY, CUDA_R_64F) )
-  // allocate an external buffer if needed
-  CHECK_CUSPARSE( cusparseSpMV_bufferSize(
-                                handle, CUSPARSE_OPERATION_NON_TRANSPOSE,
-                                &alpha, matA, vecX, &beta, vecY, CUDA_R_64F,
-                                CUSPARSE_MV_ALG_DEFAULT, &bufferSize) )
+	cusparseSpMatDescr_t matA;
+	cusparseDnVecDescr_t vecX, vecY;
+	void*  dBuffer    = NULL;
+	size_t bufferSize = 0;
+	cusparseCreate(&handle);
+	// Create sparse matrix A in Coo format
+	printf("\tCreate sparse matrix A in Coo format\n");
+	fflush(stdout);
+	cusparseCreateCoo(&matA, A_num_rows, A_num_cols, A_num_nnz, dev_ibead, dev_jbead, dev_values, CUSPARSE_INDEX_32I, CUSPARSE_INDEX_BASE_ZERO, CUDA_R_64F);
+	// Create dense vector X
+	printf("\tCreate dense vector X\n");
+	fflush(stdout);
+	cusparseCreateDnVec(&vecX, A_num_cols, dX, CUDA_R_64F);
+	// Create dense vector y
+	printf("\tCreate dense vector y\n");
+	fflush(stdout);
+	cusparseCreateDnVec(&vecY, A_num_rows, dY, CUDA_R_64F);
+	// Allocate an external buffer if needed
+	printf("\tAllocate an external buffer if needed\n");
+	fflush(stdout);
+	cusparseSpMV_bufferSize(handle, CUSPARSE_OPERATION_NON_TRANSPOSE, &alpha, matA, vecX, &beta, vecY, CUDA_R_64F, CUSPARSE_MV_ALG_DEFAULT, &bufferSize);
 
-  CHECK_CUDA( cudaMalloc(&dBuffer, bufferSize) )
+	printf("\tAllocate buffer\n");
+	fflush(stdout);
 
-  // execute SpMV
-  CHECK_CUSPARSE( cusparseSpMV(handle, CUSPARSE_OPERATION_NON_TRANSPOSE,
-                                &alpha, matA, vecX, &beta, vecY, CUDA_R_64F,
-                                CUSPARSE_MV_ALG_DEFAULT, dBuffer) )
+	cudaMalloc(&dBuffer, bufferSize);
 
-  // destroy matrix/vector descriptors
-  CHECK_CUSPARSE( cusparseDestroySpMat(matA) )
-  CHECK_CUSPARSE( cusparseDestroyDnVec(vecX) )
-  CHECK_CUSPARSE( cusparseDestroyDnVec(vecY) )
-  CHECK_CUSPARSE( cusparseDestroy(handle) )
+	// Execute SpMV
+
+	printf("\tExecute SpMV\n");
+	fflush(stdout);
+	cusparseSpMV(handle, CUSPARSE_OPERATION_NON_TRANSPOSE, &alpha, matA, vecX, &beta, vecY, CUDA_R_64F, CUSPARSE_MV_ALG_DEFAULT, dBuffer);
+
+	// destroy matrix/vector descriptors
+	cusparseDestroySpMat(matA);
+	cusparseDestroyDnVec(vecX);
+	cusparseDestroyDnVec(vecY);
+	cusparseDestroy(handle);
 	
 	
 	int size_double3 = nbead*sizeof(double3);
@@ -1538,41 +1586,32 @@ void vdw_sum_forces(double *values, int *ibead, int *jbead, int direction){
 	threads = (int)min(A_num_cols, SECTION_SIZE);
 	blocks = (int)ceil(1.0*A_num_cols/SECTION_SIZE);
 	
-	fill_with<<<blocks, threads>>>(dX, A_num_cols, -1.0);
+	//fill_with<<<blocks, threads>>>(dX, A_num_cols, -1.0);
 	
+	cudaMemset(dX, -1.0, A_num_cols * sizeof(double));
 	
 	handle = 0;
-  matA;
-  vecX, vecY;
-  dBuffer    = NULL;
-  bufferSize = 0;
-  CHECK_CUSPARSE( cusparseCreate(&handle) )
-  // Create sparse matrix A in CSR format
-  CHECK_CUSPARSE( cusparseCreateCoo(&matA, A_num_rows, A_num_cols, A_num_nnz,
-                                    dev_jbead, dev_ibead, dA_values,
-                                    CUSPARSE_INDEX_32I, CUSPARSE_INDEX_BASE_ZERO,
-                                    CUDA_R_64F) )
-  // Create dense vector X
-  CHECK_CUSPARSE( cusparseCreateDnVec(&vecX, A_num_cols, dX, CUDA_R_64F) )
-  // Create dense vector y
-  CHECK_CUSPARSE( cusparseCreateDnVec(&vecY, A_num_rows, dY, CUDA_R_64F) )
-  // allocate an external buffer if needed
-  CHECK_CUSPARSE( cusparseSpMV_bufferSize(
-                                handle, CUSPARSE_OPERATION_NON_TRANSPOSE,
-                                &alpha, matA, vecX, &beta, vecY, CUDA_R_64F,
-                                CUSPARSE_MV_ALG_DEFAULT, &bufferSize) )
-  CHECK_CUDA( cudaMalloc(&dBuffer, bufferSize) )
+	dBuffer    = NULL;
+	bufferSize = 0;
+	cusparseCreate(&handle);
+	// Create sparse matrix A in CSR format
+	cusparseCreateCoo(&matA, A_num_rows, A_num_cols, A_num_nnz, dev_jbead, dev_ibead, dev_values, CUSPARSE_INDEX_32I, CUSPARSE_INDEX_BASE_ZERO, CUDA_R_64F);
+	// Create dense vector X
+	cusparseCreateDnVec(&vecX, A_num_cols, dX, CUDA_R_64F);
+	// Create dense vector y
+	cusparseCreateDnVec(&vecY, A_num_rows, dY, CUDA_R_64F);
+	// allocate an external buffer if needed
+	cusparseSpMV_bufferSize(handle, CUSPARSE_OPERATION_NON_TRANSPOSE, &alpha, matA, vecX, &beta, vecY, CUDA_R_64F, CUSPARSE_MV_ALG_DEFAULT, &bufferSize);
+	cudaMalloc(&dBuffer, bufferSize);
 
-  // execute SpMV
-  CHECK_CUSPARSE( cusparseSpMV(handle, CUSPARSE_OPERATION_NON_TRANSPOSE,
-                                &alpha, matA, vecX, &beta, vecY, CUDA_R_64F,
-                                CUSPARSE_MV_ALG_DEFAULT, dBuffer) )
+	// execute SpMV
+	cusparseSpMV(handle, CUSPARSE_OPERATION_NON_TRANSPOSE, &alpha, matA, vecX, &beta, vecY, CUDA_R_64F, CUSPARSE_MV_ALG_DEFAULT, dBuffer);
 
-  // destroy matrix/vector descriptors
-  CHECK_CUSPARSE( cusparseDestroySpMat(matA) )
-  CHECK_CUSPARSE( cusparseDestroyDnVec(vecX) )
-  CHECK_CUSPARSE( cusparseDestroyDnVec(vecY) )
-  CHECK_CUSPARSE( cusparseDestroy(handle) )
+	// destroy matrix/vector descriptors
+	cusparseDestroySpMat(matA);
+	cusparseDestroyDnVec(vecX);
+	cusparseDestroyDnVec(vecY);
+	cusparseDestroy(handle);
 	
 	
 	size_double3 = nbead*sizeof(double3);

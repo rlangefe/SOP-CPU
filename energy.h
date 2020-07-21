@@ -44,7 +44,7 @@ void vdw_forces_att_values_gpu(double *values_x, double *values_y, double *value
 __global__ void vdw_forces_att_values_kernel(int *dev_ibead_pair_list_att, int *dev_jbead_pair_list_att, int *dev_itype_pair_list_att, int *dev_jtype_pair_list_att, double *dev_pl_lj_nat_pdb_dist, double boxl, int N, double3 *dev_unc_pos, double *dev_values_x, double *dev_values_y, double *dev_values_z);
 void vdw_forces_rep_values_gpu(double *value_x, double *value_y, double *value_z);
 __global__ void vdw_forces_rep_values_kernel(int *dev_ibead_pair_list_rep, int *dev_jbead_pair_list_rep, int *dev_itype_pair_list_rep, int *dev_jtype_pair_list_rep, double boxl, int N, double3 *dev_unc_pos, double *value_x, double *value_y, double *value_z);
-void vdw_sum_forces(double *values, int *ibead, int *jbead, int direction);
+void vdw_sum_forces(double *values, int *ibead, int *jbead, int direction, int N);
 __global__ void vdw_forces_kernel(double *dY, int size, double3 *dev_force, int direction);
 
 __global__ void fill_with(double *dX, int size, double val);
