@@ -1214,7 +1214,7 @@ void vdw_forces_att_values_gpu(double *values_x, double *values_y, double *value
 	
 	int size_int = N*sizeof(int);
 	int size_double = N*sizeof(double);
-	int size_double3 = N*sizeof(double3);
+	int size_double3 = (nbead+1)*sizeof(double3);
 
 	printf("\tCUDA Malloc\n");
 	fflush(stdout);
@@ -1252,8 +1252,29 @@ void vdw_forces_att_values_gpu(double *values_x, double *values_y, double *value
 	fflush(stdout);
 
 	cudaMemcpy(values_x, dev_values_x, size_double, cudaMemcpyDeviceToHost);
+	cudaError_t error = cudaGetLastError();
+	if(error != cudaSuccess)
+	{
+		// print the CUDA error message and exit
+		printf("CUDA error: %s\n", cudaGetErrorString(error));
+		exit(-1);
+	}
 	cudaMemcpy(values_y, dev_values_y, size_double, cudaMemcpyDeviceToHost);
+	error = cudaGetLastError();
+	if(error != cudaSuccess)
+	{
+		// print the CUDA error message and exit
+		printf("CUDA error: %s\n", cudaGetErrorString(error));
+		exit(-1);
+	}
 	cudaMemcpy(values_z, dev_values_z, size_double, cudaMemcpyDeviceToHost);
+	error = cudaGetLastError();
+	if(error != cudaSuccess)
+	{
+		// print the CUDA error message and exit
+		printf("CUDA error: %s\n", cudaGetErrorString(error));
+		exit(-1);
+	}
 										
 	cudaFree(dev_ibead_pair_list_att);
 	cudaFree(dev_jbead_pair_list_att);
@@ -1348,8 +1369,8 @@ void vdw_forces_rep_values_gpu(double *values_x, double *values_y, double *value
 	int N = nil_rep + 1;
 	
 	int size_int = N*sizeof(int);
-	int size_double3 = N*sizeof(double3);
-	int size_double = N*sizeof(double);
+	int size_double = N*sizeof(double3);
+	int size_double3 = (nbead+1)*sizeof(double);
 	
 	cudaMalloc((void **)&dev_ibead_pair_list_rep, size_int);
 	cudaMalloc((void **)&dev_jbead_pair_list_rep, size_int);
@@ -1477,8 +1498,8 @@ __global__ void vdw_forces_rep_values_kernel(int *dev_ibead_pair_list_rep, int *
 }
 
 void vdw_sum_forces(double *values, int *ibead, int *jbead, int direction, int N){	
-	int A_num_rows = nbead;
-	int A_num_cols = nbead;
+	int A_num_rows = nbead+1;
+	int A_num_cols = nbead+1;
 	int A_num_nnz  = N;
 	double alpha = 1.0;
 	double beta  = 0.0;
@@ -1493,6 +1514,13 @@ void vdw_sum_forces(double *values, int *ibead, int *jbead, int direction, int N
 	cudaMalloc((void**) &dev_jbead,  A_num_nnz * sizeof(int));
 	cudaMalloc((void**) &dev_values, A_num_nnz * sizeof(double));
 	cudaMalloc((void**) &dX,         A_num_cols * sizeof(double));
+	cudaError_t error = cudaGetLastError();
+	if(error != cudaSuccess)
+	{
+		// print the CUDA error message and exit
+		printf("CUDA error: %s\n", cudaGetErrorString(error));
+		exit(-1);
+	}
 	cudaMalloc((void**) &dY,         A_num_rows * sizeof(double));
 
 	printf("\tCUDA Memcpy Device Arrays\n");
@@ -1515,7 +1543,7 @@ void vdw_sum_forces(double *values, int *ibead, int *jbead, int direction, int N
 	cudaMemset(dX, 1.0, A_num_cols * sizeof(double));
 	
 	// check for error
-	cudaError_t error = cudaGetLastError();
+	error = cudaGetLastError();
 	if(error != cudaSuccess)
 	{
 		// print the CUDA error message and exit
@@ -1614,7 +1642,7 @@ void vdw_sum_forces(double *values, int *ibead, int *jbead, int direction, int N
 	cusparseDestroy(handle);
 	
 	
-	size_double3 = nbead*sizeof(double3);
+	size_double3 = (nbead+1)*sizeof(double3);
 	
 	threads = (int)min(A_num_rows, SECTION_SIZE);
 	blocks = (int)ceil(1.0*A_num_rows/SECTION_SIZE);
@@ -1626,7 +1654,12 @@ void vdw_sum_forces(double *values, int *ibead, int *jbead, int direction, int N
 	
 	cudaMemcpy(force, dev_force, size_double3, cudaMemcpyDeviceToHost);	
 	
+	cudaFree(dX);
+	cudaFree(dY);
+	cudaFree(dev_ibead);
+	cudaFree(dev_jbead);
 	cudaFree(dev_force);
+	cudaFree(dev_values);
 }
 
 __global__ void vdw_forces_kernel(double *dY, int size, double3 *dev_force, int direction){
