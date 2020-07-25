@@ -23,7 +23,7 @@ void update_neighbor_list_CL(){
     int N;
     int *value;
 
-    N = ncon_att;
+    N = ncon_att+1;
     
     value = (int *)malloc(N*sizeof(int));
 
@@ -33,7 +33,7 @@ void update_neighbor_list_CL(){
 
     free(value);
 
-    N = ncon_rep;
+    N = ncon_rep+!;
     
     value = (int *)malloc(N*sizeof(int));
 
@@ -48,7 +48,7 @@ void update_neighbor_list_CL(){
 void compact_native_CL(int *value){
     int N;
     
-    N = ncon_att;
+    N = ncon_att+1;
 
     // typedef these iterators for shorthand
     typedef thrust::device_vector<int>::iterator   IntIterator;
@@ -139,7 +139,7 @@ void compact_native_CL(int *value){
 void compact_non_native_CL(int *value){
     int N;
 
-    N = ncon_rep;
+    N = ncon_rep+1;
 
     // typedef these iterators for shorthand
     typedef thrust::device_vector<int>::iterator   IntIterator;
@@ -321,7 +321,7 @@ void update_neighbor_list_thrust(){
     int N;
     int *value;
 
-    N = ncon_att;
+    N = ncon_att+1;
     
     value = (int *)malloc(N*sizeof(int));
 
@@ -331,7 +331,7 @@ void update_neighbor_list_thrust(){
 
     free(value);
 
-    N = ncon_rep;
+    N = ncon_rep+1;
     
     value = (int *)malloc(N*sizeof(int));
 
@@ -346,7 +346,7 @@ void update_neighbor_list_thrust(){
 void compact_native_thrust(int *value){
     int N;
 
-    N = ncon_att;
+    N = ncon_att+1;
 
     // typedef these iterators for shorthand
     typedef thrust::device_vector<int>::iterator   IntIterator;
@@ -429,7 +429,7 @@ void compact_native_thrust(int *value){
 void compact_non_native_thrust(int *value){
     int N;
 
-    N = ncon_rep;
+    N = ncon_rep+1;
 
     // typedef these iterators for shorthand
     typedef thrust::device_vector<int>::iterator   IntIterator;
@@ -492,7 +492,7 @@ void update_neighbor_list_RL(){
 	int N;
 	
 	// Set N
-	N = ncon_att;
+	N = ncon_att+1;
 	
 	// Declare value array
 	int *value;
@@ -516,7 +516,7 @@ void update_neighbor_list_RL(){
 	 **********************************/
 	
 	// Set N
-	N = ncon_rep;
+	N = ncon_rep+1;
 	
 	// Declare value array
 	value = (int *)malloc(N*sizeof(int));

@@ -226,7 +226,7 @@ void print_sim_params() {
   if(usegpu_vdw_force){
     sprintf(oline,"Use GPU VDW Force                 : %s", "Yes");
   }else{
-    sprintf(oline,"Use GPU VDW Force                 : %s", "Yes");
+    sprintf(oline,"Use GPU VDW Force                 : %s", "No");
   }
 
   cout << oline << endl;

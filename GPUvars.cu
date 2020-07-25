@@ -111,18 +111,27 @@ void allocate_gpu(){
     int size_double3;
     
     if(usegpu_nl || usegpu_pl || usegpu_vdw_energy || usegpu_ss_ang_energy || usegpu_fene_energy || usegpu_vdw_force || usegpu_ss_ang_force || usegpu_fene_force){
-        N = nbead+1;
-        size_int = N*sizeof(int);
-
-        cudaMalloc((void **)&dev_value, size_int);
-
         if(usegpu_nl){
             if(!strcmp(nl_algorithm,"thrust")){
 
             }else if(!strcmp(nl_algorithm,"RL")){
-
+                N = (nbead+1);
+                // Calculate array sizes
+                int size_int = N*sizeof(int);
+                int size_double = N*sizeof(double);
+                int size_double3 = (nbead+1)*sizeof(double3);
+                
+                // Allocate device arrays
+                cudaMalloc((void **)&dev_ibead_lj_nat, size_int);	
+                cudaMalloc((void **)&dev_jbead_lj_nat, size_int);
+                cudaMalloc((void **)&dev_itype_lj_nat, size_int);
+                cudaMalloc((void **)&dev_jtype_lj_nat, size_int);
+                cudaMalloc((void **)&dev_unc_pos, size_double3);
+                cudaMalloc((void **)&dev_lj_nat_pdb_dist, size_double);
+                cudaMalloc((void **)&dev_value, size_int);
+                
             }else if(!strcmp(nl_algorithm,"CL")){
-
+                
             }
         }
 
@@ -137,33 +146,11 @@ void allocate_gpu(){
         }
 
         if(usegpu_vdw_energy){
-            N = nbead + 1;
-	
-            size_int = N*sizeof(int);
-            size_double = N*sizeof(double);
-            size_double3 = (nbead + 1)*sizeof(double3);
-
-            cudaMalloc((void **)&dev_ibead_pair_list_att, size_int);
-            cudaMalloc((void **)&dev_jbead_pair_list_att, size_int);
-            cudaMalloc((void **)&dev_itype_pair_list_att, size_int);
-            cudaMalloc((void **)&dev_jtype_pair_list_att, size_int);
-            cudaMalloc((void **)&dev_pl_lj_nat_pdb_dist6, size_double);
-            cudaMalloc((void **)&dev_pl_lj_nat_pdb_dist12, size_double);
             
-            cudaMalloc((void **)&dev_unc_pos, size_double3);
-            
-            cudaMalloc((void **)&dev_result, size_double);
         }
 
 
         if(usegpu_fene_energy){
-            N = nbnd+1;
-            cudaMalloc((void **)&dev_ibead_bnd, size_int);
-            cudaMalloc((void **)&dev_jbead_bnd, size_int);
-            cudaMalloc((void **)&dev_unc_pos, size_double3);
-            cudaMalloc((void **)&dev_pdb_dist, size_double);
-            cudaMalloc((void **)&dev_result, size_double);
-
             
         }
 
