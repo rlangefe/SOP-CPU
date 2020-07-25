@@ -39,14 +39,15 @@ __global__ void vdw_forces_att_kernel(int *dev_ibead_pair_list_att, int *dev_jbe
 void vdw_forces_rep_gpu();
 __global__ void vdw_forces_rep_kernel(int *dev_ibead_pair_list_rep, int *dev_jbead_pair_list_rep, int *dev_itype_pair_list_rep, int *dev_jtype_pair_list_rep, double boxl, int N, double3 *dev_unc_pos, double3 *dev_force);
 
-void vdw_forces_matrix_gpu();
-void vdw_forces_att_values_gpu(double *values_x, double *values_y, double *values_z);
-__global__ void vdw_forces_att_values_kernel(int *dev_ibead_pair_list_att, int *dev_jbead_pair_list_att, int *dev_itype_pair_list_att, int *dev_jtype_pair_list_att, double *dev_pl_lj_nat_pdb_dist, double boxl, int N, double3 *dev_unc_pos, double *dev_values_x, double *dev_values_y, double *dev_values_z);
-void vdw_forces_rep_values_gpu(double *value_x, double *value_y, double *value_z);
-__global__ void vdw_forces_rep_values_kernel(int *dev_ibead_pair_list_rep, int *dev_jbead_pair_list_rep, int *dev_itype_pair_list_rep, int *dev_jtype_pair_list_rep, double boxl, int N, double3 *dev_unc_pos, double *value_x, double *value_y, double *value_z);
-void vdw_sum_forces(double *values, int *ibead, int *jbead, int direction, int N);
-__global__ void vdw_forces_kernel(double *dY, int size, double3 *dev_force, int direction);
+void fene_energy_gpu();
+__global__ void fene_energy_gpu_kernel(int *dev_ibead_bnd, int *dev_jbead_bnd, double3 *dev_unc_pos, double *dev_pdb_dist, int boxl, int N, double dev_R0sq, double *dev_result);
 
-__global__ void fill_with(double *dX, int size, double val);
+void soft_sphere_angular_energy_gpu();
+__global__ void soft_sphere_angular_energy_gpu_kernel(int *dev_ibead_ang, int *dev_kbead_ang, double3 *dev_unc_pos, int boxl, int N, double coeff, double *dev_result);
 
+void soft_sphere_angular_forces_gpu();
+__global__ void soft_sphere_angular_forces_kernel(int *dev_ibead_ang, int *dev_kbead_ang, double boxl, int N, double coeff, double3 *dev_unc_pos, double3 *dev_force);
+
+void fene_forces_gpu();
+__global__ void fene_forces_kernel(int *dev_ibead_bnd, int *dev_jbead_bnd, double *dev_pdb_dist, double boxl, int N, double dev_R0sq, double dev_k_bnd, double3 *dev_unc_pos, double3 *dev_force);
 #endif /* ENERGY_H */

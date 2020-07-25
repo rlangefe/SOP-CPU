@@ -204,6 +204,22 @@ void print_sim_params() {
   }else{
     sprintf(oline,"Use GPU VDW Energy                : %s", "No");
   }
+
+  cout << oline << endl;
+
+  if(usegpu_ss_ang_energy){
+    sprintf(oline,"Use GPU Soft Sphere Angle Energy  : %s", "Yes");
+  }else{
+    sprintf(oline,"Use GPU Soft Sphere Angle Energy  : %s", "No");
+  }
+
+  cout << oline << endl;
+
+  if(usegpu_fene_energy){
+    sprintf(oline,"Use GPU Fene Energy               : %s", "Yes");
+  }else{
+    sprintf(oline,"Use GPU Fene Energy               : %s", "No");
+  }
   
   cout << oline << endl;
 
@@ -211,6 +227,22 @@ void print_sim_params() {
     sprintf(oline,"Use GPU VDW Force                 : %s", "Yes");
   }else{
     sprintf(oline,"Use GPU VDW Force                 : %s", "Yes");
+  }
+
+  cout << oline << endl;
+
+  if(usegpu_ss_ang_force){
+    sprintf(oline,"Use GPU Soft Sphere Angle Force   : %s", "Yes");
+  }else{
+    sprintf(oline,"Use GPU Soft Sphere Angle Force   : %s", "No");
+  }
+
+  cout << oline << endl;
+
+  if(usegpu_fene_force){
+    sprintf(oline,"Use GPU Fene Force                : %s", "Yes");
+  }else{
+    sprintf(oline,"Use GPU Fene Force                : %s", "No");
   }
   
   cout << oline << endl;

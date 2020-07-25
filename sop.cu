@@ -14,6 +14,7 @@
 #include "neighbor_list.h"
 #include "cell_list.h"
 #include "pair_list.h"
+#include "utils.h"
 
 #include <vector_types.h>
 #include <stdio.h>

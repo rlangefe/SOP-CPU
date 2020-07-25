@@ -78,8 +78,20 @@ void set_params(int icmd)
   }else if(!strcmp(opt[opt_ptr[icmd]],"usegpu_vdw_energy")){
     usegpu_vdw_energy = atoi((opt[opt_ptr[icmd]+1]));
 
+  }else if(!strcmp(opt[opt_ptr[icmd]],"usegpu_ss_ang_energy")){
+    usegpu_ss_ang_energy = atoi((opt[opt_ptr[icmd]+1]));
+
+  }else if(!strcmp(opt[opt_ptr[icmd]],"usegpu_fene_energy")){
+    usegpu_fene_energy = atoi((opt[opt_ptr[icmd]+1]));
+
   }else if(!strcmp(opt[opt_ptr[icmd]],"usegpu_vdw_force")){
     usegpu_vdw_force = atoi((opt[opt_ptr[icmd]+1]));
+
+  }else if(!strcmp(opt[opt_ptr[icmd]],"usegpu_ss_ang_force")){
+    usegpu_ss_ang_force = atoi((opt[opt_ptr[icmd]+1]));
+
+  }else if(!strcmp(opt[opt_ptr[icmd]],"usegpu_fene_force")){
+    usegpu_fene_force = atoi((opt[opt_ptr[icmd]+1]));
 
   } else if(!strcmp(opt[opt_ptr[icmd]],"nl_algorithm")){
     strcpy(nl_algorithm, opt[opt_ptr[icmd]+1]);
