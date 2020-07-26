@@ -1,13 +1,13 @@
-CC = nvcc -O3 -arch=sm_60
+CC = nvcc -O3 -arch=sm_60 -lineinfo
 
 EFILE = ./sop.x
-OBJS = ./sop.o ./utils.o ./random_generator.o ./global.o ./energy.o ./io.o ./params.o ./neighbor_list.o ./cell_list.o ./pair_list.o
+OBJS = ./sop.o ./utils.o ./random_generator.o ./global.o ./energy.o ./io.o ./params.o ./neighbor_list.o ./cell_list.o ./pair_list.o ./GPUvars.o
 
 sop.x: $(OBJS)
 	@echo "linking ..."
 	$(CC) -o $(EFILE) $(OBJS)
 
-sop.o: ./sop.h ./utils.h ./random_generator.h ./global.h ./energy.h ./io.h ./params.h ./neighbor_list.h ./cell_list.o ./pair_list.h
+sop.o: ./sop.h ./utils.h ./random_generator.h ./global.h ./energy.h ./io.h ./params.h ./neighbor_list.h ./cell_list.o ./pair_list.h ./GPUvars.h
 	$(CC) -c ./sop.cu -o ./sop.o
 
 utils.o: ./utils.h
@@ -19,7 +19,10 @@ random_generator.o: ./random_generator.h
 global.o: ./global.h ./random_generator.h
 		$(CC) -c ./global.cu -o ./global.o
 
-energy.o: ./utils.h ./global.h ./energy.h
+GPUvars.o: ./GPUvars.h ./global.h ./utils.h
+		$(CC) -c ./GPUvars.cu -o ./GPUvars.o
+
+energy.o: ./utils.h ./global.h ./energy.h ./GPUvars.h
 		$(CC) -c ./energy.cu -o ./energy.o
 
 io.o: ./global.h ./io.h
@@ -28,13 +31,13 @@ io.o: ./global.h ./io.h
 params.o: ./global.h ./params.h
 		$(CC) -c ./params.cu -o ./params.o
 
-neighbor_list.o: ./global.h ./neighbor_list.h
+neighbor_list.o: ./global.h ./neighbor_list.h ./GPUvars.h
 		$(CC) -c ./neighbor_list.cu -o ./neighbor_list.o
 
 cell_list.o: ./global.h ./cell_list.h
 		$(CC) -c ./cell_list.cu -o ./cell_list.o
 
-pair_list.o: ./global.h ./neighbor_list.h ./pair_list.h
+pair_list.o: ./global.h ./pair_list.h ./GPUvars.h ./neighbor_list.h 
 		$(CC) -c ./pair_list.cu -o ./pair_list.o
 
 clean:

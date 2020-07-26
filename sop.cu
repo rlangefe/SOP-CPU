@@ -15,6 +15,7 @@
 #include "cell_list.h"
 #include "pair_list.h"
 #include "utils.h"
+#include "GPUvars.h"
 
 #include <vector_types.h>
 #include <stdio.h>
@@ -26,12 +27,6 @@
 #include <thrust/sort.h>
 
 #define SECTION_SIZE 1024
-
-__device__ __constant__ double dev_sigma_rep[3][3] = {
-  {0.0, 0.0, 0.0},
-	{0.0, 3.8, 5.4},
-	{0.0, 5.4, 7.0}
-};
 
 int main(int argc,char* argv[])
 {
@@ -87,7 +82,16 @@ void ex_cmds()
        set_params(i);
      }
      // run simulation
-     else if( !strcmp(cmd[i],"run") ) { 
+     else if( !strcmp(cmd[i],"run") ) {
+       // Note: GPU allocation must be run
+       // after parameters are set because
+       // we only allocate enough space for
+       // the problem. Thus, we need to know
+       // all problem parameters before calculating
+       // GPU array sizes
+
+       allocate_gpu(); // allocate arrays on the GPU
+
        simulation_ctrl();
       }
      // ???
@@ -124,7 +128,7 @@ void underdamped_ctrl()
   ofstream out(ufname,ios::out|ios::app);
   static int first_time = 1;
 
-  coord* incr = new coord[nbead+1];
+  double3* incr = new double3[nbead+1];
 
   if( (!restart)&&first_time ) { // zero out the velocities and forces
     for( int i=1; i<=nbead; i++ ) {
@@ -166,6 +170,8 @@ void underdamped_ctrl()
     energy_eval();
     force_eval();
   }
+
+  host_collect();
 
   if( binsave ) {
     if( (first_time)&&(!rgen_restart) ) {
@@ -215,10 +221,12 @@ void underdamped_ctrl()
   return;
 }
 
-void calculate_observables(coord* increment)
+void calculate_observables(double3* increment)
 {
 
   using namespace std;
+
+  host_collect();
 
   char oline[1024];
   double dx,dy,dz,d;
@@ -287,17 +295,21 @@ void calculate_observables(coord* increment)
     sumvsq = 0.0;
     for( int i=1; i<=nbead; i++ ) {
       sumvsq += increment[i].x*increment[i].x +
-	increment[i].y*increment[i].y +
-	increment[i].z*increment[i].z;
+	    increment[i].y*increment[i].y +
+	    increment[i].z*increment[i].z;
     }
     sumvsq *= zeta/(2.0*h);
     kinT = sumvsq/(3.0*double(nbead));
-  } else {}
+  } else {
+
+  }
 }
 
-void underdamped_iteration(coord* incr)
+void underdamped_iteration(double3* incr)
 {
   using namespace std;
+
+  host_collect();
 
   static const double eps = 1.0e-5;
 
@@ -329,6 +341,8 @@ void underdamped_iteration(coord* incr)
 
   force_eval();
 
+  host_collect();
+
   if( T < eps ) return; // don't update velocities for steepest descent
 
   // update_velocities
@@ -341,9 +355,11 @@ void underdamped_iteration(coord* incr)
   }
 }
 
-void overdamped_iteration(coord* incr)
+void overdamped_iteration(double3* incr)
 {
    using namespace std;
+
+  host_collect();
 
    for( int i=1; i<=nbead; i++ ) {
 
@@ -386,7 +402,7 @@ void overdamped_ctrl()
   ofstream out(ufname,ios::out|ios::app);
   static int first_time = 1;
 
-  coord* incr = new coord[nbead+1];
+  double3* incr = new double3[nbead+1];
 
   if( (!restart)&&first_time ) { // zero out the velocities and forces
     for( int i=1; i<=nbead; i++ ) {
@@ -451,119 +467,6 @@ void overdamped_ctrl()
       }
 
       overdamped_iteration(incr);
-      if( !(iup%nup) ) { // updates
-	      energy_eval();
-	      calculate_observables(incr);
-        sprintf(oline,"%.0lf %f %f %f %f %f %f %f %d %f",istep,T,kinT,e_bnd,e_ang_ss,e_vdw_rr,rna_etot,Q,contct_nat,rgsq);
-	      out << oline << endl;
-        iup = 0;
-        record_traj(binfname,uncbinfname);
-        save_coords(cfname,unccfname);
-        save_vels(vfname);
-        generator.save_state();
-      }
-      istep += 1.0;
-      iup++;
-    }
-    out.close();
-  }
-
-  if(first_time){
-    first_time = 0;
-  }
-
-  delete [] incr;
-
-  return;
-}
-
-void run_ctrl()
-{
-
-  using namespace std;
-
-  char oline[2048];
-  double istep = 1.0;
-  int iup = 1;
-  ofstream out(ufname,ios::out|ios::app);
-  static int first_time = 1;
-
-  coord* incr = new coord[nbead+1];
-
-  if( (!restart)&&first_time ) { // zero out the velocities and forces
-    for( int i=1; i<=nbead; i++ ) {
-      vel[i].x = 0.0;
-      vel[i].y = 0.0;
-      vel[i].z = 0.0;
-      force[i].x = 0.0;
-      force[i].y = 0.0;
-      force[i].z = 0.0;
-    }
-  }
-
-  print_sim_params();  
-  if(neighborlist == 1){
-    run_neighbor_list_update();
-    run_pair_list_update();
-  }else if(celllist == 1){
-    run_cell_list_update();
-    run_pair_list_update();
-  }
-
-  set_potential();
-  set_forces();
-
-  char line[2048];
-
-  if( restart ) {
-    load_coords(cfname,unccfname);
-    load_vels(vfname);
-    istep = istep_restart + 1.0;
-  }
-
-  if( rgen_restart ) {
-    generator.restart();
-  }
-
-  if( first_time ) {
-    energy_eval();
-    force_eval();
-  }
-
-  if( binsave ) {
-    if( (first_time)&&(!rgen_restart) ) {
-      record_traj(binfname,uncbinfname);
-    }
-    while( istep <= nstep ) {
-
-      // compute pair separation list
-      if ((inlup % nnlup) == 0) {        
-        if(neighborlist == 1){
-          run_neighbor_list_update();
-        }else if(celllist == 1){
-          run_cell_list_update();
-        }
-        
-        inlup = 0;
-      }
-      inlup++;
-
-      if(neighborlist == 1 || celllist == 1){
-        run_pair_list_update();
-      }
-
-      switch( sim_type ) {
-        case 1:
-          underdamped_iteration(incr);
-          break;
-        case 2:
-          overdamped_iteration(incr);
-          break;
-        default:
-          cerr << "UNRECOGNIZED SIM_TYPE!" << endl;
-          exit(-1);
-      }
-      
       if( !(iup%nup) ) { // updates
 	      energy_eval();
 	      calculate_observables(incr);

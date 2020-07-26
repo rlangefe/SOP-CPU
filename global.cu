@@ -235,3 +235,66 @@ double rnd(double x)
   using namespace std;
   return ( (x>0) ? floor(x+0.5) : ceil(x-0.5) );
 }
+
+/* To whoever is maintaining this, I appologize for using variable_location.
+	It is the best way to keep track of where each variable lives.
+	If new GPU variables need to be added, please update this documentation
+	to indicate what number matches what variable groups
+
+	0: 	ibead_lj_nat
+		jbead_lj_nat
+		itype_lj_nat
+		jtype_lj_nat
+
+	1:	lj_nat_pdb_dist
+
+	2:	unc_pos
+
+	3:	ibead_lj_non_nat
+		jbead_lj_non_nat
+		itype_lj_non_nat
+		jtype_lj_non_nat
+
+	4:	ibead_neighbor_list_att
+		jbead_neighbor_list_att
+		itype_neighbor_list_att
+		jtype_neighbor_list_att
+
+	5:	nl_lj_nat_pdb_dist
+		nl_lj_nat_pdb_dist2
+		nl_lj_nat_pdb_dist6
+		nl_lj_nat_pdb_dist12
+
+	6:	ibead_neighbor_list_rep
+		jbead_neighbor_list_rep
+		itype_neighbor_list_rep
+		jtype_neighbor_list_rep
+
+	7:	ibead_pair_list_att
+		jbead_pair_list_att
+		itype_pair_list_att
+		jtype_pair_list_att
+		pl_lj_nat_pdb_dist
+		pl_lj_nat_pdb_dist2
+		pl_lj_nat_pdb_dist6
+		pl_lj_nat_pdb_dist12
+
+	8: 	ibead_pair_list_rep
+		jbead_pair_list_rep
+		itype_pair_list_rep
+		jtype_pair_list_rep
+
+	9:	ibead_bnd
+		jbead_bnd
+
+	10:	pdb_dist
+
+	11:	ibead_ang
+		kbead_ang
+
+	12:	force
+
+
+	*/
+
+int variable_location[30] = {0,0,0,0,0,0,0,0,0,0,0,0,0};

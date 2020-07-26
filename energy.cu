@@ -4,39 +4,79 @@
 #include <cuda_runtime.h>
 #include "global.h"
 #include "energy.h"
+#include "GPUvars.h"
 #include "utils.h"
 #include <stdlib.h> 
 
 #define SECTION_SIZE 1024
+#define CudaCheckError()    __cudaCheckError( __FILE__, __LINE__ )
+#define cudaCheck(error) \
+  if (error != cudaSuccess) { \
+    printf("CUDA Error: %s at %s:%d\n", \
+      cudaGetErrorString(error), \
+      __FILE__, __LINE__); \
+    exit(1); \
+              }
 
-__device__ __constant__ double dev_coeff_att[3][3] = { 
-  {0.0, 0.0, 0.0},
-  {0.0, 0.7, 0.8},
-  {0.0, 0.8, 1.0} 
+inline void __cudaCheckError( const char *file, const int line )
+{
+#ifdef CUDA_ERROR_CHECK
+    cudaError err = cudaGetLastError();
+    if ( cudaSuccess != err )
+    {
+        fprintf( stderr, "cudaCheckError() failed at %s:%i : %s\n",
+                 file, line, cudaGetErrorString( err ) );
+        exit( -1 );
+    }
+
+    // More careful checking. However, this will affect performance.
+    // Comment away if needed.
+    err = cudaDeviceSynchronize();
+    if( cudaSuccess != err )
+    {
+        fprintf( stderr, "cudaCheckError() with sync failed at %s:%i : %s\n",
+                 file, line, cudaGetErrorString( err ) );
+        exit( -1 );
+    }
+#endif
+
+    return;
+}
+
+__device__ __constant__ double dev_coeff_att[3][3] = {
+    {0.0, 0.0, 0.0},
+	{0.0, 0.7, 0.8},
+	{0.0, 0.8, 1.0}
 };
 
-__device__ __constant__ double dev_coeff_rep[3][3] = { 
-  {0.0, 0.0, 0.0},
-  {0.0, 1.0, 1.0},
-  {0.0, 1.0, 1.0} 
+__device__ __constant__ double dev_coeff_rep[3][3] = {
+    {0.0, 0.0, 0.0},
+	{0.0, 1.0, 1.0},
+	{0.0, 1.0, 1.0}
+};
+
+__device__ __constant__ double dev_force_coeff_att[3][3] = {
+    {0.0,       0.0,       0.0},
+	{0.0, -12.0*1.0, -12.0*0.8},
+	{0.0, -12.0*0.8, -12.0*0.7}
+};
+
+__device__ __constant__ double dev_force_coeff_rep[3][3] = {
+    {0.0,       0.0,       0.0},
+	{0.0,  -6.0*1.0,  -6.0*1.0},
+	{0.0,  -6.0*1.0,  -6.0*1.0}
 };
 
 __device__ __constant__ double dev_sigma_rep[3][3] = {
-	{0.0, 0.0, 0.0},
+    {0.0, 0.0, 0.0},
 	{0.0, 3.8, 5.4},
 	{0.0, 5.4, 7.0}
 };
 
-__device__ __constant__ double dev_force_coeff_att[3][3] = { 
-  {0.0,       0.0,       0.0},
-  {0.0, -12.0*1.0, -12.0*0.8},
-	{0.0, -12.0*0.8, -12.0*0.7}
-};
-
-__device__ double dev_force_coeff_rep[3][3] = {
-  {0.0,       0.0,       0.0},
-	{0.0,  -6.0*1.0,  -6.0*1.0},
-	{0.0,  -6.0*1.0,  -6.0*1.0}
+__device__ __constant__ double dev_rcut_nat[3][3] = {
+    { 0.0,  0.0,  0.0},
+    { 0.0,  8.0, 11.0},
+    { 0.0, 11.0, 14.0}
 };
 
 void energy_eval()
@@ -177,6 +217,8 @@ void fene_energy()
 
   using namespace std;
 
+  device_to_host(3);
+
   int ibead, jbead;
   double dx, dy, dz, d,dev;
   char line[2048];
@@ -216,6 +258,8 @@ void soft_sphere_angular_energy()
 
   using namespace std;
 
+  device_to_host(4);
+
   e_ang_ss = 0.0;
   int ibead, kbead;
   coord r_ik;
@@ -250,6 +294,8 @@ void vdw_energy()
 {
 
   using namespace std;
+
+  device_to_host(2);
 
   int ibead,jbead;
   int itype,jtype;
@@ -320,6 +366,8 @@ void vdw_forces()
 {
 
   using namespace std;
+
+  device_to_host(5);
 
   char line[2048];
 
@@ -417,6 +465,8 @@ void soft_sphere_angular_forces()
 
   using namespace std;
 
+  device_to_host(7);
+
   char line[2048];
 
   int ibead,kbead;
@@ -465,6 +515,8 @@ void fene_forces()
 
   using namespace std;
 
+  device_to_host(6);
+
 
   int ibead, jbead;
   double dx, dy, dz, d, dev, dev2;
@@ -511,6 +563,8 @@ void random_force() {
 
   using namespace std;
 
+  device_to_host(8);
+
   double var;
   int problem;
 
@@ -535,74 +589,33 @@ void vdw_energy_gpu()
   e_vdw_rr_att = 0.0;
   e_vdw_rr_rep = 0.0;
 
+  host_to_device(2);
+
   vdw_energy_att_gpu();
+  
+  CudaCheckError();
 
   vdw_energy_rep_gpu();
+
+  CudaCheckError();
 
   e_vdw_rr = e_vdw_rr_att + e_vdw_rr_rep;
 
   return;
 }
 
-void vdw_energy_att_gpu(){	
-	int N = nil_att + 1;
-	
-	int size_int = N*sizeof(int);
-	int size_double = N*sizeof(double);
-	int size_double3 = (nbead + 1)*sizeof(double3);
+void vdw_energy_att_gpu(){
+  int N = nil_att+1;
 
-	int *dev_ibead_pair_list_att;
-	int *dev_jbead_pair_list_att;
-	int *dev_itype_pair_list_att;
-	int *dev_jtype_pair_list_att;
-	double *dev_pl_lj_nat_pdb_dist6;
-	double *dev_pl_lj_nat_pdb_dist12;
-	
-	double3 *dev_unc_pos;
-	
-	double *dev_result;
-	
-	cudaMalloc((void **)&dev_ibead_pair_list_att, size_int);
-	cudaMalloc((void **)&dev_jbead_pair_list_att, size_int);
-	cudaMalloc((void **)&dev_itype_pair_list_att, size_int);
-	cudaMalloc((void **)&dev_jtype_pair_list_att, size_int);
-	cudaMalloc((void **)&dev_pl_lj_nat_pdb_dist6, size_double);
-	cudaMalloc((void **)&dev_pl_lj_nat_pdb_dist12, size_double);
-	
-	cudaMalloc((void **)&dev_unc_pos, size_double3);
-	
-	cudaMalloc((void **)&dev_result, size_double);
-	
-	cudaMemcpy(dev_ibead_pair_list_att, ibead_pair_list_att, size_int, cudaMemcpyHostToDevice);
-	cudaMemcpy(dev_jbead_pair_list_att, jbead_pair_list_att, size_int, cudaMemcpyHostToDevice);
-	cudaMemcpy(dev_itype_pair_list_att, itype_pair_list_att, size_int, cudaMemcpyHostToDevice);
-	cudaMemcpy(dev_jtype_pair_list_att, jtype_pair_list_att, size_int, cudaMemcpyHostToDevice);
-	cudaMemcpy(dev_pl_lj_nat_pdb_dist6, pl_lj_nat_pdb_dist6, size_double, cudaMemcpyHostToDevice);
-	cudaMemcpy(dev_pl_lj_nat_pdb_dist12, pl_lj_nat_pdb_dist12, size_double, cudaMemcpyHostToDevice);
-	
-	
-	cudaMemcpy(dev_unc_pos, unc_pos, size_double3, cudaMemcpyHostToDevice);
-	
 	int threads = (int)min(N, SECTION_SIZE);
-  	int blocks = (int)ceil(1.0*N/SECTION_SIZE);
+  int blocks = (int)ceil(1.0*N/SECTION_SIZE);
 	
 	vdw_energy_att_value_kernel<<<blocks, threads>>>(dev_ibead_pair_list_att, dev_jbead_pair_list_att, dev_itype_pair_list_att, dev_jtype_pair_list_att, 
-														dev_pl_lj_nat_pdb_dist6, dev_pl_lj_nat_pdb_dist12, dev_unc_pos, N, boxl, dev_result);
+														dev_pl_lj_nat_pdb_dist6, dev_pl_lj_nat_pdb_dist12, dev_unc_pos, N, boxl, dev_value_double);
 	
-	hier_ks_scan(dev_result, dev_result, N, 0);
+	hier_ks_scan(dev_value_double, dev_value_double, N, 0);
 	
-	cudaMemcpy(&e_vdw_rr_att, &dev_result[N-1], sizeof(double), cudaMemcpyDeviceToHost);
-	
-	cudaFree(dev_ibead_pair_list_att);
-	cudaFree(dev_jbead_pair_list_att);
-	cudaFree(dev_itype_pair_list_att);
-	cudaFree(dev_jtype_pair_list_att);
-	cudaFree(dev_pl_lj_nat_pdb_dist6);
-	cudaFree(dev_pl_lj_nat_pdb_dist12);
-	
-	cudaFree(dev_unc_pos);
-	
-	cudaFree(dev_result);
+	cudaMemcpy(&e_vdw_rr_att, &dev_value_double[N-1], sizeof(double), cudaMemcpyDeviceToHost);
 }
 
 __global__ void vdw_energy_att_value_kernel(int *dev_ibead_pair_list_att, int *dev_jbead_pair_list_att, int *dev_itype_pair_list_att, int *dev_jtype_pair_list_att, 
@@ -657,51 +670,16 @@ void vdw_energy_rep_gpu(){
 	int size_int = N*sizeof(int);
 	int size_double = N*sizeof(double);
 	int size_double3 = (nbead + 1)*sizeof(double3);
-
-	int *dev_ibead_pair_list_rep;
-  int *dev_jbead_pair_list_rep;
-  int *dev_itype_pair_list_rep;
-  int *dev_jtype_pair_list_rep;
-	
-	double3 *dev_unc_pos;
-	
-	double *dev_result;
-	
-	cudaMalloc((void **)&dev_ibead_pair_list_rep, size_int);
-	cudaMalloc((void **)&dev_jbead_pair_list_rep, size_int);
-	cudaMalloc((void **)&dev_itype_pair_list_rep, size_int);
-	cudaMalloc((void **)&dev_jtype_pair_list_rep, size_int);
-	
-	cudaMalloc((void **)&dev_unc_pos, size_double3);
-	
-	cudaMalloc((void **)&dev_result, size_double);
-	
-	cudaMemcpy(dev_ibead_pair_list_rep, ibead_pair_list_rep, size_int, cudaMemcpyHostToDevice);
-	cudaMemcpy(dev_jbead_pair_list_rep, jbead_pair_list_rep, size_int, cudaMemcpyHostToDevice);
-	cudaMemcpy(dev_itype_pair_list_rep, itype_pair_list_rep, size_int, cudaMemcpyHostToDevice);
-	cudaMemcpy(dev_jtype_pair_list_rep, jtype_pair_list_rep, size_int, cudaMemcpyHostToDevice);
-	
-	
-	cudaMemcpy(dev_unc_pos, unc_pos, size_double3, cudaMemcpyHostToDevice);
 	
 	int threads = (int)min(N, SECTION_SIZE);
   int blocks = (int)ceil(1.0*N/SECTION_SIZE);
 	
 	vdw_energy_rep_value_kernel<<<blocks, threads>>>(dev_ibead_pair_list_rep, dev_jbead_pair_list_rep, dev_itype_pair_list_rep, dev_jtype_pair_list_rep, 
-													                        dev_unc_pos, N, boxl, dev_result);
+													                        dev_unc_pos, N, boxl, dev_value_double);
 	
-	hier_ks_scan(dev_result, dev_result, N, 0);
+	hier_ks_scan(dev_value_double, dev_value_double, N, 0);
 	
-	cudaMemcpy(&e_vdw_rr_rep, &dev_result[N-1], sizeof(double), cudaMemcpyDeviceToHost);
-	
-	cudaFree(dev_ibead_pair_list_rep);
-  cudaFree(dev_jbead_pair_list_rep);
-  cudaFree(dev_itype_pair_list_rep);
-  cudaFree(dev_jtype_pair_list_rep);
-	
-	cudaFree(dev_unc_pos);
-	
-	cudaFree(dev_result);
+	cudaMemcpy(&e_vdw_rr_rep, &dev_value_double[N-1], sizeof(double), cudaMemcpyDeviceToHost);
 }
 
 __global__ void vdw_energy_rep_value_kernel(int *dev_ibead_pair_list_rep, int *dev_jbead_pair_list_rep, int *dev_itype_pair_list_rep, int *dev_jtype_pair_list_rep, 
@@ -915,57 +893,29 @@ void vdw_forces_gpu()
 {
   using namespace std;
 
+  host_to_device(5);
+
   vdw_forces_att_gpu();
 
+  CudaCheckError();
+
   vdw_forces_rep_gpu();
+
+  CudaCheckError();
 }
 
-void vdw_forces_att_gpu(){
-	int *dev_ibead_pair_list_att;
-	int *dev_jbead_pair_list_att;
-	int *dev_itype_pair_list_att;
-	int *dev_jtype_pair_list_att;
-	double *dev_pl_lj_nat_pdb_dist;
-	double3 *dev_unc_pos;
-	double3 *dev_force;
-	
+void vdw_forces_att_gpu(){	
 	int N = nil_att + 1;
 	
 	int size_int = N*sizeof(int);
 	int size_double = N*sizeof(double);
 	int size_double3 = (nbead+1)*sizeof(double3);
 	
-	cudaMalloc((void **)&dev_ibead_pair_list_att, size_int);
-	cudaMalloc((void **)&dev_jbead_pair_list_att, size_int);
-	cudaMalloc((void **)&dev_itype_pair_list_att, size_int);
-	cudaMalloc((void **)&dev_jtype_pair_list_att, size_int);
-	cudaMalloc((void **)&dev_pl_lj_nat_pdb_dist, size_double);
-	cudaMalloc((void **)&dev_unc_pos, size_double3);
-	cudaMalloc((void **)&dev_force, size_double3);
-	
-	cudaMemcpy(dev_ibead_pair_list_att, ibead_pair_list_att, size_int, cudaMemcpyHostToDevice);
-	cudaMemcpy(dev_jbead_pair_list_att, jbead_pair_list_att, size_int, cudaMemcpyHostToDevice);
-	cudaMemcpy(dev_itype_pair_list_att, itype_pair_list_att, size_int, cudaMemcpyHostToDevice);
-	cudaMemcpy(dev_jtype_pair_list_att, jtype_pair_list_att, size_int, cudaMemcpyHostToDevice);
-	cudaMemcpy(dev_pl_lj_nat_pdb_dist, pl_lj_nat_pdb_dist, size_double, cudaMemcpyHostToDevice);
-	cudaMemcpy(dev_unc_pos, unc_pos, size_double3, cudaMemcpyHostToDevice);
-	cudaMemcpy(dev_force, force, size_double3, cudaMemcpyHostToDevice);
-	
 	int threads = (int)min(N, SECTION_SIZE);
 	int blocks = (int)ceil(1.0*N/SECTION_SIZE);
 	
 	vdw_forces_att_kernel<<<blocks, threads>>>(dev_ibead_pair_list_att, dev_jbead_pair_list_att, dev_itype_pair_list_att, dev_jtype_pair_list_att, 
 												dev_pl_lj_nat_pdb_dist, boxl, N, dev_unc_pos, dev_force);
-												
-	cudaMemcpy(force, dev_force, size_double3, cudaMemcpyDeviceToHost);
-										
-	cudaFree(dev_ibead_pair_list_att);
-	cudaFree(dev_jbead_pair_list_att);
-	cudaFree(dev_itype_pair_list_att);
-	cudaFree(dev_jtype_pair_list_att);
-	cudaFree(dev_pl_lj_nat_pdb_dist);
-	cudaFree(dev_unc_pos);
-	cudaFree(dev_force);
 }
 
 __global__ void vdw_forces_att_kernel(int *dev_ibead_pair_list_att, int *dev_jbead_pair_list_att, int *dev_itype_pair_list_att, int *dev_jtype_pair_list_att, 
@@ -1044,49 +994,17 @@ __global__ void vdw_forces_att_kernel(int *dev_ibead_pair_list_att, int *dev_jbe
 	}
 }
 
-void vdw_forces_rep_gpu(){
-	int *dev_ibead_pair_list_rep;
-	int *dev_jbead_pair_list_rep;
-	int *dev_itype_pair_list_rep;
-	int *dev_jtype_pair_list_rep;
-	double3 *dev_unc_pos;
-	double3 *dev_force;
-	
+void vdw_forces_rep_gpu(){	
 	int N = nil_rep + 1;
 	
 	int size_int = N*sizeof(int);
 	int size_double3 = (nbead+1)*sizeof(double3);
-	
-	cudaMalloc((void **)&dev_ibead_pair_list_rep, size_int);
-	cudaMalloc((void **)&dev_jbead_pair_list_rep, size_int);
-	cudaMalloc((void **)&dev_itype_pair_list_rep, size_int);
-	cudaMalloc((void **)&dev_jtype_pair_list_rep, size_int);
-	cudaMalloc((void **)&dev_unc_pos, size_double3);
-	cudaMalloc((void **)&dev_force, size_double3);
-	
-	cudaMemcpy(dev_ibead_pair_list_rep, ibead_pair_list_rep, size_int, cudaMemcpyHostToDevice);
-	cudaMemcpy(dev_jbead_pair_list_rep, jbead_pair_list_rep, size_int, cudaMemcpyHostToDevice);
-	cudaMemcpy(dev_itype_pair_list_rep, itype_pair_list_rep, size_int, cudaMemcpyHostToDevice);
-	cudaMemcpy(dev_jtype_pair_list_rep, jtype_pair_list_rep, size_int, cudaMemcpyHostToDevice);
-	
-	cudaMemcpy(dev_unc_pos, unc_pos, size_double3, cudaMemcpyHostToDevice);
-	cudaMemcpy(dev_force, force, size_double3, cudaMemcpyHostToDevice);
 	
 	int threads = (int)min(N, SECTION_SIZE);
 	int blocks = (int)ceil(1.0*N/SECTION_SIZE);
 	
 	vdw_forces_rep_kernel<<<blocks, threads>>>(dev_ibead_pair_list_rep, dev_jbead_pair_list_rep, dev_itype_pair_list_rep, dev_jtype_pair_list_rep, 
 												boxl, N, dev_unc_pos, dev_force);
-										
-										
-	cudaMemcpy(force, dev_force, size_double3, cudaMemcpyDeviceToHost);
-	
-	cudaFree(dev_ibead_pair_list_rep);
-	cudaFree(dev_jbead_pair_list_rep);
-	cudaFree(dev_itype_pair_list_rep);
-	cudaFree(dev_jtype_pair_list_rep);
-	cudaFree(dev_unc_pos);
-	cudaFree(dev_force);
 }
 
 __global__ void vdw_forces_rep_kernel(int *dev_ibead_pair_list_rep, int *dev_jbead_pair_list_rep, int *dev_itype_pair_list_rep, int *dev_jtype_pair_list_rep, double boxl, int N,
@@ -1168,13 +1086,9 @@ __global__ void vdw_forces_rep_kernel(int *dev_ibead_pair_list_rep, int *dev_jbe
 	}
 }
 
-void fene_energy_gpu(){
-	int *dev_ibead_bnd;
-	int *dev_jbead_bnd;
-	double *dev_pdb_dist;
-	double *dev_result;
-	double3 *dev_unc_pos;
-	
+void fene_energy_gpu(){	
+  host_to_device(3);
+
 	int N = nbnd+1;
 	int size_int = N*sizeof(int);
 	int size_double3 = (nbead+1)*sizeof(double3);
@@ -1182,33 +1096,18 @@ void fene_energy_gpu(){
 	
 	e_bnd = 0.0;
 	
-	cudaMalloc((void **)&dev_ibead_bnd, size_int);
-	cudaMalloc((void **)&dev_jbead_bnd, size_int);
-	cudaMalloc((void **)&dev_unc_pos, size_double3);
-	cudaMalloc((void **)&dev_pdb_dist, size_double);
-	cudaMalloc((void **)&dev_result, size_double);
-	
-	cudaMemcpy(dev_ibead_bnd, ibead_bnd, size_int, cudaMemcpyHostToDevice);
-	cudaMemcpy(dev_jbead_bnd, jbead_bnd, size_int, cudaMemcpyHostToDevice);
-	cudaMemcpy(dev_unc_pos, unc_pos, size_double3, cudaMemcpyHostToDevice);
-	cudaMemcpy(dev_pdb_dist, pdb_dist, size_double, cudaMemcpyHostToDevice);
-	
 	int threads = (int)min(N, SECTION_SIZE);
   int blocks = (int)ceil(1.0*N/SECTION_SIZE);
 	
-	fene_energy_gpu_kernel<<<blocks, threads>>>(dev_ibead_bnd, dev_jbead_bnd, dev_unc_pos, dev_pdb_dist, boxl, N, R0sq, dev_result);
+	fene_energy_gpu_kernel<<<blocks, threads>>>(dev_ibead_bnd, dev_jbead_bnd, dev_unc_pos, dev_pdb_dist, boxl, N, R0sq, dev_value_double);
+
+  CudaCheckError();
 	
-	hier_ks_scan(dev_result, dev_result, N, 0);
+	hier_ks_scan(dev_value_double, dev_value_double, N, 0);
 	
-	cudaMemcpy(&e_bnd, &dev_result[N-1], sizeof(double), cudaMemcpyDeviceToHost);
-	//printf("%d\n", e_bnd);
-	//fflush(stdout);
-	
-	cudaFree(dev_ibead_bnd);
-	cudaFree(dev_jbead_bnd);
-	cudaFree(dev_unc_pos);
-	cudaFree(dev_pdb_dist);
-	cudaFree(dev_result);
+	cudaMemcpy(&e_bnd, &dev_value_double[N-1], sizeof(double), cudaMemcpyDeviceToHost);
+
+  CudaCheckError();
 	
 	e_bnd *= -e_bnd_coeff;
 
@@ -1256,43 +1155,29 @@ __global__ void fene_energy_gpu_kernel(int *dev_ibead_bnd, int *dev_jbead_bnd, d
 
 
 void soft_sphere_angular_energy_gpu(){
+  host_to_device(4);
+
 	e_ang_ss = 0.0;
-	
+
 	int N = nang+1;
 	int size_int = N*sizeof(int);
 	int size_double = N*sizeof(double);
 	int size_double3 = (nbead+1)*sizeof(double3);
 	
-	int *dev_ibead_ang;
-	int *dev_kbead_ang;
-	
-	double *dev_result;
-
-  double3 *dev_unc_pos;
-	
-	cudaMalloc((void **)&dev_ibead_ang, size_int);
-	cudaMalloc((void **)&dev_kbead_ang, size_int);
-	cudaMalloc((void **)&dev_result, size_double);
-	cudaMalloc((void **)&dev_unc_pos, size_double3);
-	
-	cudaMemcpy(dev_ibead_ang, ibead_ang, size_int, cudaMemcpyHostToDevice);
-	cudaMemcpy(dev_kbead_ang, kbead_ang, size_int, cudaMemcpyHostToDevice);
-	cudaMemcpy(dev_unc_pos, unc_pos, size_double3, cudaMemcpyHostToDevice);
-	
 	int threads = (int)min(N, SECTION_SIZE);
 	int blocks = (int)ceil(1.0*N/SECTION_SIZE);
 	
-	soft_sphere_angular_energy_gpu_kernel<<<blocks, threads>>>(dev_ibead_ang, dev_kbead_ang, dev_unc_pos, boxl, N, e_ang_ss_coeff, dev_result);
+	soft_sphere_angular_energy_gpu_kernel<<<blocks, threads>>>(dev_ibead_ang, dev_kbead_ang, dev_unc_pos, boxl, N, e_ang_ss_coeff, dev_value_double);
 
-	hier_ks_scan(dev_result, dev_result, N, 0);
+  CudaCheckError();
+
+	hier_ks_scan(dev_value_double, dev_value_double, N, 0);
 	
-	cudaMemcpy(&e_ang_ss, &dev_result[N-1], sizeof(double), cudaMemcpyDeviceToHost);
-	
-	cudaFree(dev_ibead_ang);
-	cudaFree(dev_kbead_ang);
-	cudaFree(dev_result);
-  cudaFree(dev_unc_pos);
-	
+  CudaCheckError();
+
+	cudaMemcpy(&e_ang_ss, &dev_value_double[N-1], sizeof(double), cudaMemcpyDeviceToHost);
+
+  CudaCheckError();
 }
 
 __global__ void soft_sphere_angular_energy_gpu_kernel(int *dev_ibead_ang, int *dev_kbead_ang, double3 *dev_unc_pos, int boxl, int N, double coeff, double *dev_result){
@@ -1338,41 +1223,20 @@ __global__ void soft_sphere_angular_energy_gpu_kernel(int *dev_ibead_ang, int *d
 	
 }
 
-void soft_sphere_angular_forces_gpu(){
-	int *dev_ibead_ang;
-	int *dev_kbead_ang;
-	
-	double3 *dev_unc_pos;
-	double3 *dev_force;
+void soft_sphere_angular_forces_gpu(){	
+  host_to_device(7);
 	
 	int N = nang + 1;
 	
 	int size_int = N*sizeof(int);
 	int size_double3 = (nbead+1)*sizeof(double3);
 	
-	cudaMalloc((void **)&dev_ibead_ang, size_int);
-	cudaMalloc((void **)&dev_kbead_ang, size_int);
-	
-	cudaMalloc((void **)&dev_unc_pos, size_double3);
-	cudaMalloc((void **)&dev_force, size_double3);
-	
-	cudaMemcpy(dev_ibead_ang, ibead_ang, size_int, cudaMemcpyHostToDevice);
-	cudaMemcpy(dev_kbead_ang, kbead_ang, size_int, cudaMemcpyHostToDevice);
-	
-	cudaMemcpy(dev_unc_pos, unc_pos, size_double3, cudaMemcpyHostToDevice);
-	cudaMemcpy(dev_force, force, size_double3, cudaMemcpyHostToDevice);
-	
 	int threads = (int)min(N, SECTION_SIZE);
 	int blocks = (int)ceil(1.0*N/SECTION_SIZE);
 	
 	soft_sphere_angular_forces_kernel<<<blocks, threads>>>(dev_ibead_ang, dev_kbead_ang, boxl, N, f_ang_ss_coeff, dev_unc_pos, dev_force);
 
-	cudaMemcpy(force, dev_force, size_double3, cudaMemcpyDeviceToHost);
-	
-	cudaFree(dev_ibead_ang);
-	cudaFree(dev_kbead_ang);
-	cudaFree(dev_unc_pos);
-	cudaFree(dev_force);
+  CudaCheckError();
 }
 
 __global__ void soft_sphere_angular_forces_kernel(int *dev_ibead_ang, int *dev_kbead_ang, double boxl, int N, double f_ang_ss_coeff, double3 *dev_unc_pos, double3 *dev_force){
@@ -1433,48 +1297,20 @@ __global__ void soft_sphere_angular_forces_kernel(int *dev_ibead_ang, int *dev_k
 }
 
 void fene_forces_gpu(){
-	int *dev_ibead_bnd;
-	int *dev_jbead_bnd;
+  host_to_device(6);
 
-  double *dev_pdb_dist;
-	
-	double3 *dev_unc_pos;
-	double3 *dev_force;
-	
 	int N = nbnd + 1;
 	
 	int size_int = N*sizeof(int);
 	int size_double3 = (nbead+1)*sizeof(double3);
 	int size_double = N*sizeof(double);
 	
-	cudaMalloc((void **)&dev_ibead_bnd, size_int);
-	cudaMalloc((void **)&dev_jbead_bnd, size_int);
-
-	cudaMalloc((void **)&dev_pdb_dist, size_double);
-	
-	cudaMalloc((void **)&dev_unc_pos, size_double3);
-	cudaMalloc((void **)&dev_force, size_double3);
-	
-	cudaMemcpy(dev_ibead_bnd, ibead_bnd, size_int, cudaMemcpyHostToDevice);
-	cudaMemcpy(dev_jbead_bnd, jbead_bnd, size_int, cudaMemcpyHostToDevice);
-
-	cudaMemcpy(dev_pdb_dist, pdb_dist, size_double, cudaMemcpyHostToDevice);
-	
-	cudaMemcpy(dev_unc_pos, unc_pos, size_double3, cudaMemcpyHostToDevice);
-	cudaMemcpy(dev_force, force, size_double3, cudaMemcpyHostToDevice);
-	
 	int threads = (int)min(N, SECTION_SIZE);
 	int blocks = (int)ceil(1.0*N/SECTION_SIZE);
 	
 	fene_forces_kernel<<<blocks, threads>>>(dev_ibead_bnd, dev_jbead_bnd, dev_pdb_dist, boxl, N, R0sq, k_bnd, dev_unc_pos, dev_force);
 
-	cudaMemcpy(force, dev_force, size_double3, cudaMemcpyDeviceToHost);
-	
-	cudaFree(dev_ibead_bnd);
-	cudaFree(dev_jbead_bnd);
-	cudaFree(dev_unc_pos);
-	cudaFree(dev_force);
-  cudaFree(dev_pdb_dist);
+  CudaCheckError();
 }
 
 __global__ void fene_forces_kernel(int *dev_ibead_bnd, int *dev_jbead_bnd, double *dev_pdb_dist, double boxl, int N, double dev_R0sq, double dev_k_bnd, double3 *dev_unc_pos, double3 *dev_force){

@@ -26,6 +26,7 @@ extern int nopt_tot; // total # of options
 extern char pathname[];
 extern char nl_algorithm[];
 extern char pl_algorithm[];
+extern int variable_location[];
 
 // bonded info
 extern double k_bnd;
