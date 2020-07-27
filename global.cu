@@ -176,6 +176,8 @@ int usegpu_ss_ang_energy = 0;
 int usegpu_ss_ang_force = 0;
 int usegpu_fene_energy = 0;
 int usegpu_fene_force = 0;
+int usegpu_pos = 0;
+int usegpu_vel = 0;
 int neighborlist = 0; // neighbor list cutoff method?
 int celllist = 0; // cell list cutoff method?
 double boxl; // Length of an edge of the simulation box

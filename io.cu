@@ -247,6 +247,22 @@ void print_sim_params() {
   
   cout << oline << endl;
 
+  if(usegpu_pos){
+    sprintf(oline,"Use GPU Position Update           : %s", "Yes");
+  }else{
+    sprintf(oline,"Use GPU Position Update           : %s", "No");
+  }
+  
+  cout << oline << endl;
+
+  if(usegpu_vel){
+    sprintf(oline,"Use GPU Velocity Update           : %s", "Yes");
+  }else{
+    sprintf(oline,"Use GPU Velocity Update           : %s", "No");
+  }
+  
+  cout << oline << endl;
+
   cout << endl;
 
 }

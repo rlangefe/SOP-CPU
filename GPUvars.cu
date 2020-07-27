@@ -81,6 +81,12 @@ int *dev_kbead_ang;
 
 double3 *dev_force;
 
+// Position
+double3 *dev_pos;
+
+// Velocity
+double3 *dev_vel;
+
 void allocate_gpu(){
     int N;
     int size_int;
@@ -97,7 +103,7 @@ void allocate_gpu(){
     size_double = N*sizeof(double);
     size_double3 = (nbead+1)*sizeof(double3);
     
-    if(usegpu_nl || usegpu_pl || usegpu_vdw_energy || usegpu_ss_ang_energy || usegpu_fene_energy || usegpu_vdw_force || usegpu_ss_ang_force || usegpu_fene_force){
+    if(usegpu_nl || usegpu_pl || usegpu_vdw_energy || usegpu_ss_ang_energy || usegpu_fene_energy || usegpu_vdw_force || usegpu_ss_ang_force || usegpu_fene_force || usegpu_pos || usegpu_vel){
         N = (nbead+1)*(nbead+1);
         size_int = N*sizeof(int);
         size_double = N*sizeof(double);
@@ -230,7 +236,7 @@ void allocate_gpu(){
             cudaCheck(cudaMalloc((void **)&dev_kbead_ang, size_int));
         }
 
-        if(usegpu_ss_ang_force || usegpu_fene_force || usegpu_vdw_force){
+        if(usegpu_ss_ang_force || usegpu_fene_force || usegpu_vdw_force || usegpu_vel){
             N = nbead+1;
             size_int = N*sizeof(int);
             size_double = N*sizeof(double);
@@ -238,6 +244,26 @@ void allocate_gpu(){
 
             cudaCheck(cudaMalloc((void **)&dev_force, size_double3));
         }
+
+        if(usegpu_pos){
+            N = nbead+1;
+            size_int = N*sizeof(int);
+            size_double = N*sizeof(double);
+            size_double3 = (nbead+1)*sizeof(double3); 
+
+            cudaCheck(cudaMalloc((void **)&dev_pos, size_double3));
+        }
+
+        if(usegpu_pos || usegpu_vel){
+            N = nbead+1;
+            size_int = N*sizeof(int);
+            size_double = N*sizeof(double);
+            size_double3 = (nbead+1)*sizeof(double3);
+
+            cudaCheck(cudaMalloc((void **)&dev_vel, size_double3));
+        }
+
+
     }
 
     cudaDeviceSynchronize();
@@ -609,6 +635,11 @@ void host_to_device(int op){
         
         // Random Forces
         case 8:
+            N = nbead+1;
+            size_int = N*sizeof(int);
+            size_double = N*sizeof(double);
+            size_double3 = (nbead+1)*sizeof(double3);
+
             if(variable_location[12] == 0){
                 cudaCheck(cudaMemcpy(dev_force, force, size_double3, cudaMemcpyHostToDevice));
 
@@ -616,9 +647,63 @@ void host_to_device(int op){
             }
 
             if(variable_location[2] == 0){
-                cudaCheck(cudaMemcpy(unc_pos, dev_unc_pos, size_double3, cudaMemcpyDeviceToHost));
+                cudaCheck(cudaMemcpy(dev_unc_pos, unc_pos, size_double3, cudaMemcpyHostToDevice));
 
                 variable_location[2] = 1;
+            }
+
+            break;
+
+        // Pos Update
+        case 9:
+            N = nbead+1;
+            size_int = N*sizeof(int);
+            size_double = N*sizeof(double);
+            size_double3 = (nbead+1)*sizeof(double3);
+
+            if(variable_location[2] == 0){
+                cudaCheck(cudaMemcpy(dev_unc_pos, unc_pos, size_double3, cudaMemcpyHostToDevice));
+
+                variable_location[2] = 1;
+            }
+
+            if(variable_location[12] == 0){
+                cudaCheck(cudaMemcpy(dev_force, force, size_double3, cudaMemcpyHostToDevice));
+
+                variable_location[12] = 1;
+            }
+
+            if(variable_location[14] == 0){
+                cudaCheck(cudaMemcpy(dev_vel, vel, size_double3, cudaMemcpyHostToDevice));
+
+                variable_location[14] = 1;
+            }
+
+            if(variable_location[15] == 0){
+                cudaCheck(cudaMemcpy(dev_pos, pos, size_double3, cudaMemcpyHostToDevice));
+
+                variable_location[15] = 1;
+            }
+
+            break;
+
+        // Velocity Update
+        case 10:
+            N = nbead+1;
+            size_int = N*sizeof(int);
+            size_double = N*sizeof(double);
+            size_double3 = (nbead+1)*sizeof(double3);
+
+            if(variable_location[12] == 0){
+                cudaCheck(cudaMemcpy(dev_force, force, size_double3, cudaMemcpyHostToDevice));
+
+                variable_location[12] = 1;
+            }
+
+            if(variable_location[14] == 0){
+                cudaCheck(cudaMemcpy(dev_vel, vel, size_double3, cudaMemcpyHostToDevice));
+
+                variable_location[14] = 1;
             }
 
             break;
@@ -635,7 +720,7 @@ void host_to_device(int op){
 
     cudaDeviceSynchronize();
 
-    print_op(op, 1);
+    //print_op(op, 1);
 }
 
 void device_to_host(int op){
@@ -1015,6 +1100,60 @@ void device_to_host(int op){
 
             break;
 
+        // Pos Update
+        case 9:
+            N = nbead+1;
+            size_int = N*sizeof(int);
+            size_double = N*sizeof(double);
+            size_double3 = (nbead+1)*sizeof(double3);
+
+            if(variable_location[2] == 1){
+                cudaCheck(cudaMemcpy(unc_pos, dev_unc_pos, size_double3, cudaMemcpyDeviceToHost));
+
+                variable_location[2] = 0;
+            }
+
+            if(variable_location[12] == 1){
+                cudaCheck(cudaMemcpy(force, dev_force, size_double3, cudaMemcpyDeviceToHost));
+
+                variable_location[12] = 0;
+            }
+
+            if(variable_location[14] == 1){
+                cudaCheck(cudaMemcpy(vel, dev_vel, size_double3, cudaMemcpyDeviceToHost));
+
+                variable_location[14] = 0;
+            }
+
+            if(variable_location[15] == 1){
+                cudaCheck(cudaMemcpy(pos, dev_pos, size_double3, cudaMemcpyDeviceToHost));
+
+                variable_location[15] = 0;
+            }
+
+            break;
+
+        // Velocity Update
+        case 10:
+            N = nbead+1;
+            size_int = N*sizeof(int);
+            size_double = N*sizeof(double);
+            size_double3 = (nbead+1)*sizeof(double3);
+
+            if(variable_location[12] == 1){
+                cudaCheck(cudaMemcpy(force, dev_force, size_double3, cudaMemcpyDeviceToHost));
+
+                variable_location[12] = 0;
+            }
+
+            if(variable_location[14] == 1){
+                cudaCheck(cudaMemcpy(vel, dev_vel, size_double3, cudaMemcpyDeviceToHost));
+
+                variable_location[14] = 0;
+            }
+
+            break;
+
         default:
             break;
     }
@@ -1027,7 +1166,7 @@ void device_to_host(int op){
 
     cudaDeviceSynchronize();
 
-    print_op(op, 0);
+    //print_op(op, 0);
 }
 
 void host_collect(){

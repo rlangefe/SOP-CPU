@@ -93,6 +93,12 @@ void set_params(int icmd)
   }else if(!strcmp(opt[opt_ptr[icmd]],"usegpu_fene_force")){
     usegpu_fene_force = atoi((opt[opt_ptr[icmd]+1]));
 
+  }else if(!strcmp(opt[opt_ptr[icmd]],"usegpu_pos")){
+    usegpu_pos = atoi((opt[opt_ptr[icmd]+1]));
+
+  }else if(!strcmp(opt[opt_ptr[icmd]],"usegpu_vel")){
+    usegpu_vel = atoi((opt[opt_ptr[icmd]+1]));
+
   } else if(!strcmp(opt[opt_ptr[icmd]],"nl_algorithm")){
     strcpy(nl_algorithm, opt[opt_ptr[icmd]+1]);
 

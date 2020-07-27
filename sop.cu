@@ -313,6 +313,12 @@ void underdamped_iteration(double3* incr)
 
   static const double eps = 1.0e-5;
 
+  if(usegpu_pos){
+    host_to_device(9);
+  }else{
+    device_to_host(9);
+  }
+
   for( int i=1; i<=nbead; i++ ) {
 
     // compute position increments
@@ -347,6 +353,12 @@ void underdamped_iteration(double3* incr)
 
   // update_velocities
 
+  if(usegpu_vel){
+    host_to_device(10);
+  }else{
+    device_to_host(10);
+  }
+
   for( int i=1; i<=nbead; i++ ) {
     // compute velocity increments
     vel[i].x = a3*incr[i].x + a4*force[i].x;
@@ -361,29 +373,29 @@ void overdamped_iteration(double3* incr)
 
   host_collect();
 
-   for( int i=1; i<=nbead; i++ ) {
+  for( int i=1; i<=nbead; i++ ) {
 
-      // compute position increments
+    // compute position increments
 
-      incr[i].x = a5*force[i].x;
-      incr[i].y = a5*force[i].y;
-      incr[i].z = a5*force[i].z;
+    incr[i].x = a5*force[i].x;
+    incr[i].y = a5*force[i].y;
+    incr[i].z = a5*force[i].z;
 
-      // update bead positions
+    // update bead positions
 
-      unc_pos[i].x += incr[i].x;
-      unc_pos[i].y += incr[i].y;
-      unc_pos[i].z += incr[i].z;
+    unc_pos[i].x += incr[i].x;
+    unc_pos[i].y += incr[i].y;
+    unc_pos[i].z += incr[i].z;
 
-      pos[i].x += incr[i].x;
-      pos[i].y += incr[i].y;
-      pos[i].z += incr[i].z;
+    pos[i].x += incr[i].x;
+    pos[i].y += incr[i].y;
+    pos[i].z += incr[i].z;
 
-      pos[i].x -= boxl*rnd(pos[i].x/boxl);
-      pos[i].y -= boxl*rnd(pos[i].y/boxl);
-      pos[i].z -= boxl*rnd(pos[i].z/boxl);
+    pos[i].x -= boxl*rnd(pos[i].x/boxl);
+    pos[i].y -= boxl*rnd(pos[i].y/boxl);
+    pos[i].z -= boxl*rnd(pos[i].z/boxl);
 
-   }
+  }
 
    // force_update
 
