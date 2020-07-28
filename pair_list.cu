@@ -137,6 +137,8 @@ void update_pair_list() {
 
   }
 
+  assert(nil_att >= 0);
+
   for (int i=1; i<=nnl_rep; i++) {
 
     ibead = ibead_neighbor_list_rep[i];
@@ -166,6 +168,8 @@ void update_pair_list() {
       jtype_pair_list_rep[nil_rep] = jtype;
     }
   }
+
+  assert(nil_rep >= 0);
 }
 
 
@@ -468,6 +472,8 @@ void update_pair_list_RL(){
     
   nil_att = compact_native_pl(N) - 1;
   CudaCheckError();
+
+  assert(nil_att >= 0);
 	
 	
 	/**********************************
@@ -486,6 +492,8 @@ void update_pair_list_RL(){
     
   nil_rep = compact_non_native_pl(N) - 1;
   CudaCheckError();
+
+  assert(nil_rep >= 0);
 }
 
 void calculate_array_native_pl(int boxl, int N){
@@ -498,17 +506,22 @@ void calculate_array_native_pl(int boxl, int N){
 	// Calculate block/thread count
 	int threads = (int)min(N, SECTION_SIZE);
   int blocks = (int)ceil(1.0*N/SECTION_SIZE);
+
+  assert(threads > 0);
+  assert(blocks > 0);
 	
 	// Compute binary array
-	array_native_pl_kernel<<<blocks, threads>>>(dev_ibead_neighbor_list_att, dev_jbead_neighbor_list_att, dev_itype_neighbor_list_att, dev_jtype_neighbor_list_att, dev_unc_pos, dev_nl_lj_nat_pdb_dist, dev_value_int, boxl, N);
+	array_native_pl_kernel<<<blocks, threads>>>(dev_ibead_neighbor_list_att, dev_jbead_neighbor_list_att, dev_itype_neighbor_list_att, 
+                                          dev_jtype_neighbor_list_att, dev_unc_pos, dev_nl_lj_nat_pdb_dist, dev_value_int, boxl, N);
 
   CudaCheckError();
   // Sync device
   cudaDeviceSynchronize();
 }
 
-__global__ void array_native_pl_kernel(int *dev_ibead_neighbor_list_att, int *dev_jbead_neighbor_list_att, int *dev_itype_neighbor_list_att, int *dev_jtype_neighbor_list_att, double3 *dev_unc_pos, double *dev_nl_lj_nat_pdb_dist, 
-                            int *dev_value, int boxl, int N){
+__global__ void array_native_pl_kernel(int *dev_ibead_neighbor_list_att, int *dev_jbead_neighbor_list_att, int *dev_itype_neighbor_list_att, 
+                                      int *dev_jtype_neighbor_list_att, double3 *dev_unc_pos, double *dev_nl_lj_nat_pdb_dist, 
+                                      int *dev_value, int boxl, int N){
   int i = blockIdx.x * blockDim.x + threadIdx.x;
   if(i > 0 && i < N){
     double dx, dy, dz;
@@ -581,6 +594,9 @@ void calculate_array_non_native_pl(int boxl, int N){
 	// Calculate block/thread count
 	int threads = (int)min(N, SECTION_SIZE);
   int blocks = (int)ceil(1.0*N/SECTION_SIZE);
+
+  assert(threads > 0);
+  assert(blocks > 0);
 	
 	// Compute binary array
 	array_non_native_pl_kernel<<<blocks, threads>>>(dev_ibead_neighbor_list_rep, dev_jbead_neighbor_list_rep, dev_itype_neighbor_list_rep, dev_jtype_neighbor_list_rep, 
@@ -660,10 +676,10 @@ int compact_native_pl(int N){
 
     // Copy size of compacted array from device to host and store in arrSize
     int arrSize;
-    cudaMemcpy(&arrSize, &dev_output_int[N-1], sizeof(int), cudaMemcpyDeviceToHost); 
+    cudaCheck(cudaMemcpy(&arrSize, &dev_output_int[N-1], sizeof(int), cudaMemcpyDeviceToHost)); 
 
     int temp;
-    cudaMemcpy(&temp, &dev_value_int[N-1], sizeof(int), cudaMemcpyDeviceToHost); 
+    cudaCheck(cudaMemcpy(&temp, &dev_value_int[N-1], sizeof(int), cudaMemcpyDeviceToHost)); 
 
     // Increment arrSize by 1 if needed
     if(temp){
@@ -701,10 +717,10 @@ int compact_non_native_pl(int N){
 
     // Copy size of compacted array from device to host and store in arrSize
     int arrSize;
-    cudaMemcpy(&arrSize, &dev_output_int[N-1], sizeof(int), cudaMemcpyDeviceToHost); 
+    cudaCheck(cudaMemcpy(&arrSize, &dev_output_int[N-1], sizeof(int), cudaMemcpyDeviceToHost)); 
 
     int temp;
-    cudaMemcpy(&temp, &dev_value_int[N-1], sizeof(int), cudaMemcpyDeviceToHost); 
+    cudaCheck(cudaMemcpy(&temp, &dev_value_int[N-1], sizeof(int), cudaMemcpyDeviceToHost)); 
 
     // Increment arrSize by 1 if needed
     if(temp){
@@ -733,4 +749,6 @@ void allocate_and_copy(T *dev_index, int *dev_value, int *dev_output, int N, int
     copyElements<<<blocks, threads>>>(dev_index, dev_value, dev_output, dev_result_index, N);
 
     cudaDeviceSynchronize();
+
+    CudaCheckError();
 }

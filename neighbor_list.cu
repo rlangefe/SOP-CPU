@@ -299,6 +299,8 @@ void update_neighbor_list() {
     }
   }
 
+  assert(nnl_att >= 0);
+
   // calculations for non-native (repulsive) contacts
   for (int i=1; i<=ncon_rep; i++) {
     // record sigma for ibead and jbead
@@ -346,6 +348,8 @@ void update_neighbor_list() {
       jtype_neighbor_list_rep[nnl_rep] = jtype;
     }
   }
+
+  assert(nnl_rep >= 0);
 }
 
 void update_neighbor_list_thrust(){
@@ -496,6 +500,10 @@ void update_neighbor_list_RL(){
 	calculate_array_native(boxl, N);
     
     nnl_att = compact_native(N) - 1;
+
+    CudaCheckError();
+
+    assert(nnl_att >= 0);
 	
 	/**********************************
 	 *								  *
@@ -510,6 +518,10 @@ void update_neighbor_list_RL(){
 	calculate_array_non_native(boxl, N);
     
     nnl_rep = compact_non_native(N) - 1;
+
+    CudaCheckError();
+
+    assert(nnl_rep >= 0);
 }
 
 

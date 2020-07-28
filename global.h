@@ -12,6 +12,8 @@ class coord {
   double z;
 };
 
+extern int debug;
+
 const int mcmd = 100; // maximum number of input commands
 const int mopt = 10; // maximum number of options associated with a command
 const int mopt_tot = mcmd*mopt; // max total number of options

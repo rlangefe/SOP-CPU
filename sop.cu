@@ -171,7 +171,7 @@ void underdamped_ctrl()
     force_eval();
   }
 
-  host_collect();
+  //host_collect();
 
   if( binsave ) {
     if( (first_time)&&(!rgen_restart) ) {
@@ -309,7 +309,7 @@ void underdamped_iteration(double3* incr)
 {
   using namespace std;
 
-  host_collect();
+  //host_collect();
 
   static const double eps = 1.0e-5;
 
@@ -347,11 +347,11 @@ void underdamped_iteration(double3* incr)
 
   force_eval();
 
-  host_collect();
-
   if( T < eps ) return; // don't update velocities for steepest descent
 
   // update_velocities
+
+  //host_collect();
 
   if(usegpu_vel){
     host_to_device(10);

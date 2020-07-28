@@ -69,6 +69,9 @@ void set_params(int icmd)
   } else if( !strcmp(opt[opt_ptr[icmd]],"nnlup") ) { // neighbor / cell list update frequency
     nnlup = atoi(opt[opt_ptr[icmd]+1]);
 
+  }else if(!strcmp(opt[opt_ptr[icmd]],"debug")){
+    debug = atoi((opt[opt_ptr[icmd]+1]));
+
   }else if(!strcmp(opt[opt_ptr[icmd]],"usegpu_nl")){
     usegpu_nl = atoi((opt[opt_ptr[icmd]+1]));
 

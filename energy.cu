@@ -297,6 +297,9 @@ void vdw_energy()
 
   device_to_host(2);
 
+  printf("nil_att: %d\nnil_rep: %d\n", nil_att, nil_rep);
+  fflush(stdout);
+
   int ibead,jbead;
   int itype,jtype;
   double dx,dy,dz,d,d2,d6,d12;
@@ -589,6 +592,9 @@ void vdw_energy_gpu()
   e_vdw_rr_att = 0.0;
   e_vdw_rr_rep = 0.0;
 
+  printf("nil_att: %d\nnil_rep: %d\n", nil_att, nil_rep);
+  fflush(stdout);
+
   host_to_device(2);
 
   vdw_energy_att_gpu();
@@ -605,6 +611,8 @@ void vdw_energy_gpu()
 }
 
 void vdw_energy_att_gpu(){
+  e_vdw_rr_att = 0.0;
+
   int N = nil_att+1;
 
 	int threads = (int)min(N, SECTION_SIZE);
@@ -612,10 +620,17 @@ void vdw_energy_att_gpu(){
 	
 	vdw_energy_att_value_kernel<<<blocks, threads>>>(dev_ibead_pair_list_att, dev_jbead_pair_list_att, dev_itype_pair_list_att, dev_jtype_pair_list_att, 
 														dev_pl_lj_nat_pdb_dist6, dev_pl_lj_nat_pdb_dist12, dev_unc_pos, N, boxl, dev_value_double);
+
+  CudaCheckError();
 	
 	hier_ks_scan(dev_value_double, dev_value_double, N, 0);
 	
-	cudaMemcpy(&e_vdw_rr_att, &dev_value_double[N-1], sizeof(double), cudaMemcpyDeviceToHost);
+	cudaCheck(cudaMemcpy(&e_vdw_rr_att, &dev_value_double[N-1], sizeof(double), cudaMemcpyDeviceToHost));
+
+  printf("e_vdw_rr_att: %f\n", e_vdw_rr_att);
+  fflush(stdout);
+
+  CudaCheckError();
 }
 
 __global__ void vdw_energy_att_value_kernel(int *dev_ibead_pair_list_att, int *dev_jbead_pair_list_att, int *dev_itype_pair_list_att, int *dev_jtype_pair_list_att, 
@@ -665,7 +680,7 @@ __global__ void vdw_energy_att_value_kernel(int *dev_ibead_pair_list_att, int *d
 void vdw_energy_rep_gpu(){
 	e_vdw_rr_rep = 0.0;
 	
-	int N = nil_rep + 1;
+	int N = nil_rep+1;
 	
 	int size_int = N*sizeof(int);
 	int size_double = N*sizeof(double);
@@ -676,10 +691,17 @@ void vdw_energy_rep_gpu(){
 	
 	vdw_energy_rep_value_kernel<<<blocks, threads>>>(dev_ibead_pair_list_rep, dev_jbead_pair_list_rep, dev_itype_pair_list_rep, dev_jtype_pair_list_rep, 
 													                        dev_unc_pos, N, boxl, dev_value_double);
+
+  CudaCheckError();
 	
 	hier_ks_scan(dev_value_double, dev_value_double, N, 0);
-	
-	cudaMemcpy(&e_vdw_rr_rep, &dev_value_double[N-1], sizeof(double), cudaMemcpyDeviceToHost);
+
+	cudaCheck(cudaMemcpy(&e_vdw_rr_rep, &dev_value_double[N-1], sizeof(double), cudaMemcpyDeviceToHost));
+
+  printf("e_vdw_rr_rep: %f\n", e_vdw_rr_rep);
+  fflush(stdout);
+
+  CudaCheckError();
 }
 
 __global__ void vdw_energy_rep_value_kernel(int *dev_ibead_pair_list_rep, int *dev_jbead_pair_list_rep, int *dev_itype_pair_list_rep, int *dev_jtype_pair_list_rep, 
@@ -735,6 +757,8 @@ void hier_ks_scan(double *dev_X, double *dev_Y, int N, int re){
     if(N <= SECTION_SIZE){
         ksScanInc<<<1, N>>>(dev_X, dev_Y, N);
 
+        CudaCheckError();
+
         cudaDeviceSynchronize();
 
         return;
@@ -743,7 +767,7 @@ void hier_ks_scan(double *dev_X, double *dev_Y, int N, int re){
         int blocks = (int)ceil(1.0*N/SECTION_SIZE);
 
         double *dev_S;
-        cudaMalloc((void**)&dev_S, (int)ceil(1.0*N/SECTION_SIZE) * sizeof(double));
+        cudaCheck(cudaMalloc((void**)&dev_S, (int)ceil(1.0*N/SECTION_SIZE) * sizeof(double)));
         
         ksScanAuxInc<<<blocks, threads>>>(dev_X, dev_Y, N, dev_S);
         cudaDeviceSynchronize();
@@ -753,6 +777,8 @@ void hier_ks_scan(double *dev_X, double *dev_Y, int N, int re){
         
         sumIt<<<blocks, threads>>>(dev_Y, dev_S, N);
         cudaDeviceSynchronize();
+
+        CudaCheckError();
 
         cudaFree(dev_S);
 
@@ -916,6 +942,8 @@ void vdw_forces_att_gpu(){
 	
 	vdw_forces_att_kernel<<<blocks, threads>>>(dev_ibead_pair_list_att, dev_jbead_pair_list_att, dev_itype_pair_list_att, dev_jtype_pair_list_att, 
 												dev_pl_lj_nat_pdb_dist, boxl, N, dev_unc_pos, dev_force);
+
+  CudaCheckError();
 }
 
 __global__ void vdw_forces_att_kernel(int *dev_ibead_pair_list_att, int *dev_jbead_pair_list_att, int *dev_itype_pair_list_att, int *dev_jtype_pair_list_att, 
@@ -1005,6 +1033,7 @@ void vdw_forces_rep_gpu(){
 	
 	vdw_forces_rep_kernel<<<blocks, threads>>>(dev_ibead_pair_list_rep, dev_jbead_pair_list_rep, dev_itype_pair_list_rep, dev_jtype_pair_list_rep, 
 												boxl, N, dev_unc_pos, dev_force);
+  CudaCheckError();
 }
 
 __global__ void vdw_forces_rep_kernel(int *dev_ibead_pair_list_rep, int *dev_jbead_pair_list_rep, int *dev_itype_pair_list_rep, int *dev_jtype_pair_list_rep, double boxl, int N,

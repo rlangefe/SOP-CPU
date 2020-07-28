@@ -12,7 +12,7 @@ coord::coord() {
 
 coord::~coord() {
 }
-const int debug = 0;
+int debug = 0;
 
 int ncmd;
 char cmd[mcmd+1][mwdsize];
@@ -299,4 +299,4 @@ double rnd(double x)
 
 	*/
 
-int variable_location[30] = {0,0,0,0,0,0,0,0,0,0,0,0,0};
+int variable_location[30] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};

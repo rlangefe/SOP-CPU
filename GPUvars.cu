@@ -2,6 +2,7 @@
 #include "global.h"
 #include <stdio.h>
 
+#define CudaCheckError()    __cudaCheckError( __FILE__, __LINE__ )
 #define cudaCheck(error) \
   if (error != cudaSuccess) { \
     printf("CUDA Error: %s at %s:%d\n", \
@@ -9,6 +10,31 @@
       __FILE__, __LINE__); \
     exit(1); \
               }
+
+inline void __cudaCheckError( const char *file, const int line )
+{
+#ifdef CUDA_ERROR_CHECK
+    cudaError err = cudaGetLastError();
+    if ( cudaSuccess != err )
+    {
+        fprintf( stderr, "cudaCheckError() failed at %s:%i : %s\n",
+                 file, line, cudaGetErrorString( err ) );
+        exit( -1 );
+    }
+
+    // More careful checking. However, this will affect performance.
+    // Comment away if needed.
+    err = cudaDeviceSynchronize();
+    if( cudaSuccess != err )
+    {
+        fprintf( stderr, "cudaCheckError() with sync failed at %s:%i : %s\n",
+                 file, line, cudaGetErrorString( err ) );
+        exit( -1 );
+    }
+#endif
+
+    return;
+}
 
 // General
 double3 *dev_unc_pos;
@@ -266,6 +292,8 @@ void allocate_gpu(){
 
     }
 
+    CudaCheckError();
+
     cudaDeviceSynchronize();
 }
 
@@ -277,7 +305,9 @@ void host_to_device(int op){
 	int size_double;
 	int size_double3;
 
-    //printf("%d: ", op);
+    if(debug){
+        printf("%*d: ", 2, op);
+    }
 
     cudaDeviceSynchronize();
 
@@ -411,6 +441,7 @@ void host_to_device(int op){
 
             // Native
             if(variable_location[7] == 0){
+                //printf("\tCopy VDW Energy");
                 cudaCheck(cudaMemcpy(dev_ibead_pair_list_att, ibead_pair_list_att, size_int, cudaMemcpyHostToDevice));
                 cudaCheck(cudaMemcpy(dev_jbead_pair_list_att, jbead_pair_list_att, size_int, cudaMemcpyHostToDevice));
                 cudaCheck(cudaMemcpy(dev_itype_pair_list_att, itype_pair_list_att, size_int, cudaMemcpyHostToDevice));
@@ -712,15 +743,21 @@ void host_to_device(int op){
             break;
     }
 
-    for(int i = 0; i < 14; i++){
-        //printf("%d ", variable_location[i]);
+    if(debug){
+        for(int i = 0; i < 15; i++){
+            printf("%d ", variable_location[i]);
+        }
+        //printf(" GPU\n");
+        fflush(stdout);
     }
-    //printf(" GPU\n");
-    fflush(stdout);
+
+    CudaCheckError();
 
     cudaDeviceSynchronize();
 
-    //print_op(op, 1);
+    if(debug){
+        print_op(op, 1);
+    }
 }
 
 void device_to_host(int op){
@@ -729,7 +766,9 @@ void device_to_host(int op){
 	int size_double;
 	int size_double3;
 
-    //printf("%d: ", op);
+    if(debug){
+        printf("%*d: ", 2, op);
+    }
 
     cudaDeviceSynchronize();
 
@@ -1158,49 +1197,59 @@ void device_to_host(int op){
             break;
     }
 
-    for(int i = 0; i < 14; i++){
-        //printf("%d ", variable_location[i]);
+    if(debug){
+        for(int i = 0; i < 15; i++){
+            printf("%d ", variable_location[i]);
+        }
+        //printf("\n");
+        fflush(stdout);
     }
-    //printf("\n");
-    fflush(stdout);
+
+    CudaCheckError();
 
     cudaDeviceSynchronize();
 
-    //print_op(op, 0);
+    if(debug){
+        print_op(op, 0);
+    }
 }
 
+// TODO: Fix bug to make sure copies correct things
 void host_collect(){
-    if(usegpu_nl){
+        if(debug)
+            printf("host_collect\n\t");
         device_to_host(0);
-    }
-
-    if(usegpu_pl){
+        if(debug)
+            printf("\t");
         device_to_host(1);
-    }
-
-    if(usegpu_vdw_energy){
+        if(debug)
+            printf("\t");
         device_to_host(2);
-    }
-
-    if(usegpu_fene_energy){
+        if(debug)
+            printf("\t");
         device_to_host(3);
-    }
-
-    if(usegpu_ss_ang_energy){
+        if(debug)
+            printf("\t");
         device_to_host(4);
-    }
-
-    if(usegpu_vdw_force){
+        if(debug)
+            printf("\t");
         device_to_host(5);
-    }
-
-    if(usegpu_fene_force){
+        if(debug)
+            printf("\t");
         device_to_host(6);
-    }
-
-    if(usegpu_ss_ang_force){
+        printf("\t");
         device_to_host(7);
-    }
+        if(debug)
+            printf("\t");
+        device_to_host(8);
+        if(debug)
+            printf("\t");
+        device_to_host(9);
+        if(debug)
+            printf("\t");
+        device_to_host(10);
+        if(debug)
+            printf("host_collect\n");
 }
 
 void print_op(int op, int val){
