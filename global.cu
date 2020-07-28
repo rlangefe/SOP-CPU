@@ -21,6 +21,7 @@ int opt_ptr[mcmd+1];
 char pathname[MAXPATHLEN];
 char nl_algorithm[30];
 char pl_algorithm[30];
+int prec = 0;
 
 // bonded info
 double k_bnd; // bond spring constant

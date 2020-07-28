@@ -170,6 +170,11 @@ void update_pair_list() {
   }
 
   assert(nil_rep >= 0);
+  
+  if(debug){
+    printf("nil_att: %d\nnil_rep: %d\n", nil_att, nil_rep);
+    fflush(stdout);
+  }
 }
 
 
@@ -470,7 +475,7 @@ void update_pair_list_RL(){
 	calculate_array_native_pl(boxl, N);
   CudaCheckError();
     
-  nil_att = compact_native_pl(N) - 1;
+  nil_att = compact_native_pl(N)-1;
   CudaCheckError();
 
   assert(nil_att >= 0);
@@ -490,7 +495,7 @@ void update_pair_list_RL(){
 	calculate_array_non_native_pl(boxl, N);
   CudaCheckError();
     
-  nil_rep = compact_non_native_pl(N) - 1;
+  nil_rep = compact_non_native_pl(N)-1;
   CudaCheckError();
 
   assert(nil_rep >= 0);
@@ -573,6 +578,8 @@ __global__ void array_native_pl_kernel(int *dev_ibead_neighbor_list_att, int *de
 
     // square cutoff distance, since sqrt(d2) is computationally expensive
     rcut2 = rcut*rcut;
+
+    //printf("%f\t%f\t%f\t%d\t%d\n", d2, rcut2, dev_nl_lj_nat_pdb_dist[i], ibead, jbead);
 
     if(d2 < rcut2){
       dev_value[i] = 1;
@@ -678,14 +685,6 @@ int compact_native_pl(int N){
     int arrSize;
     cudaCheck(cudaMemcpy(&arrSize, &dev_output_int[N-1], sizeof(int), cudaMemcpyDeviceToHost)); 
 
-    int temp;
-    cudaCheck(cudaMemcpy(&temp, &dev_value_int[N-1], sizeof(int), cudaMemcpyDeviceToHost)); 
-
-    // Increment arrSize by 1 if needed
-    if(temp){
-        arrSize++;
-    }
-
     int threads = (int)min(N, SECTION_SIZE);
     int blocks = (int)ceil(1.0*N/SECTION_SIZE);
     
@@ -705,7 +704,7 @@ int compact_native_pl(int N){
 
     allocate_and_copy<double>(dev_nl_lj_nat_pdb_dist12, dev_value_int, dev_output_int, N, arrSize, dev_pl_lj_nat_pdb_dist12);
 
-    return arrSize-1;
+    return arrSize;
 }
 
 int compact_non_native_pl(int N){
@@ -722,11 +721,6 @@ int compact_non_native_pl(int N){
     int temp;
     cudaCheck(cudaMemcpy(&temp, &dev_value_int[N-1], sizeof(int), cudaMemcpyDeviceToHost)); 
 
-    // Increment arrSize by 1 if needed
-    if(temp){
-        arrSize++;
-    }
-
     int threads = (int)min(N, SECTION_SIZE);
     int blocks = (int)ceil(1.0*N/SECTION_SIZE);
 
@@ -738,7 +732,7 @@ int compact_non_native_pl(int N){
 
     allocate_and_copy<int>(dev_jtype_neighbor_list_rep, dev_value_int, dev_output_int, N, arrSize, dev_jtype_pair_list_rep);
 
-    return arrSize-1;
+    return arrSize;
 }
 
 template <typename T>

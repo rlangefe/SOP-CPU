@@ -171,7 +171,7 @@ void underdamped_ctrl()
     force_eval();
   }
 
-  //host_collect();
+  host_collect();
 
   if( binsave ) {
     if( (first_time)&&(!rgen_restart) ) {
@@ -197,13 +197,36 @@ void underdamped_ctrl()
       if( !(iup%nup) ) { // updates
 	      energy_eval();
 	      calculate_observables(incr);
-        sprintf(oline,"%.0lf %f %f %f %f %f %f %f %d %f", istep,T,kinT,e_bnd,e_ang_ss,e_vdw_rr,rna_etot, Q,contct_nat,rgsq);
+        if(!prec){
+          sprintf(oline,"%.0lf %f %f %f %f %f %f %f %d %f", istep,T,kinT,e_bnd,e_ang_ss,e_vdw_rr,rna_etot, Q,contct_nat,rgsq);
+        }else{
+          sprintf(oline,"%.0lf %.*f %.*f %.*f %.*f %.*f %.*f %.*f %d %.*f", istep, prec, T, prec, kinT, prec, e_bnd, prec, e_ang_ss, prec, e_vdw_rr, prec, rna_etot, prec, Q, contct_nat, prec, rgsq);
+        }
 	      out << oline << endl;
 	      iup = 0;
 	      record_traj(binfname,uncbinfname);
 	      save_coords(cfname,unccfname);
 	      save_vels(vfname);
 	      generator.save_state();
+      }
+      if(debug){
+        if(istep == 3618){
+          sprintf(oline,"Attractive");
+          out << oline << endl;
+          for(int z = 0; z < nil_att+1; z++){
+            sprintf(oline,"ibead: %d\tjbead: %d", ibead_pair_list_att[z], jbead_pair_list_att[z]);
+            out << oline << endl;
+          }
+          
+
+          sprintf(oline,"\nRepulsive");
+          out << oline << endl;
+          for(int z = 0; z < nil_rep+1; z++){
+            sprintf(oline,"ibead: %d\tjbead: %d", ibead_pair_list_rep[z], jbead_pair_list_rep[z]);
+            out << oline << endl;
+          }
+          out << oline << endl;
+        }
       }
 
       istep += 1.0;

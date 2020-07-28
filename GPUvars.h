@@ -82,6 +82,7 @@ extern double3 *dev_vel;
 void allocate_gpu();
 void host_to_device(int op);
 void device_to_host(int op);
+void device_to_host_copy(int op);
 void host_collect();
 void print_op(int op, int val);
 

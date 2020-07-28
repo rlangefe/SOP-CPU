@@ -912,14 +912,6 @@ int compact_native(int N){
     int arrSize;
     cudaMemcpy(&arrSize, &dev_output_int[N-1], sizeof(int), cudaMemcpyDeviceToHost); 
 
-    int temp;
-    cudaMemcpy(&temp, &dev_value_int[N-1], sizeof(int), cudaMemcpyDeviceToHost); 
-
-    // Increment arrSize by 1 if needed
-    if(temp){
-        arrSize++;
-    }
-
     int threads = (int)min(N, SECTION_SIZE);
     int blocks = (int)ceil(1.0*N/SECTION_SIZE);
 
@@ -939,7 +931,7 @@ int compact_native(int N){
 
     allocate_and_copy<double>(dev_lj_nat_pdb_dist12, dev_value_int, dev_output_int, N, arrSize, dev_nl_lj_nat_pdb_dist12);
 
-    return arrSize-1;
+    return arrSize;
 }
 
 
@@ -954,14 +946,6 @@ int compact_non_native(int N){
     int arrSize;
     cudaMemcpy(&arrSize, &dev_output_int[N-1], sizeof(int), cudaMemcpyDeviceToHost); 
 
-    int temp;
-    cudaMemcpy(&temp, &dev_value_int[N-1], sizeof(int), cudaMemcpyDeviceToHost); 
-
-    // Increment arrSize by 1 if needed
-    if(temp){
-        arrSize++;
-    }
-
     int threads = (int)min(N, SECTION_SIZE);
     int blocks = (int)ceil(1.0*N/SECTION_SIZE);
 
@@ -973,5 +957,5 @@ int compact_non_native(int N){
 
     allocate_and_copy<int>(dev_jtype_lj_non_nat, dev_value_int, dev_output_int, N, arrSize, dev_jtype_neighbor_list_rep);
 
-    return arrSize-1;
+    return arrSize;
 }
