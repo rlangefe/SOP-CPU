@@ -410,6 +410,9 @@ void alloc_arrays()
   rna_base_allocated = 1;
   rna_phosphate_allocated = 1;
 
+  // increment
+  incr = new double3[nbead+1];
+
   // miscellaneous run parameters
 
   run = 1;

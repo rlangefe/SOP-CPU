@@ -170,11 +170,6 @@ void update_pair_list() {
   }
 
   assert(nil_rep >= 0);
-  
-  if(debug){
-    printf("nil_att: %d\nnil_rep: %d\n", nil_att, nil_rep);
-    fflush(stdout);
-  }
 }
 
 
@@ -199,7 +194,7 @@ void update_pair_list_CL(){
 void compact_native_pl_CL(){
     int N;
     
-    N = nnl_att;
+    N = nnl_att+1;
 
     // typedef these iterators for shorthand
     typedef thrust::device_vector<int>::iterator   IntIterator;
@@ -272,7 +267,7 @@ void compact_native_pl_CL(){
 void compact_non_native_pl_CL(){
     int N;
 
-    N = nnl_rep;
+    N = nnl_rep+1;
 
     // typedef these iterators for shorthand
     typedef thrust::device_vector<int>::iterator   IntIterator;
@@ -333,7 +328,7 @@ void update_pair_list_thrust(){
 
     host_to_device(1);
 
-    N = nnl_att;
+    N = nnl_att+1;
 
     calculate_array_native_pl(boxl, N);
 
@@ -349,7 +344,7 @@ void update_pair_list_thrust(){
 void compact_native_pl_thrust(){
     int N;
 
-    N = nnl_att;
+    N = nnl_att+1;
 
     // typedef these iterators for shorthand
     typedef thrust::device_vector<int>::iterator   IntIterator;
@@ -414,7 +409,7 @@ void compact_native_pl_thrust(){
 void compact_non_native_pl_thrust(){
     int N;
 
-    N = nnl_rep;
+    N = nnl_rep+1;
 
     // typedef these iterators for shorthand
     typedef thrust::device_vector<int>::iterator   IntIterator;

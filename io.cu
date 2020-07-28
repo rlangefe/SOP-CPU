@@ -265,11 +265,9 @@ void print_sim_params() {
 
   if(debug){
     sprintf(oline,"Debug                             : %s", "Yes");
-  }
-  
-  cout << oline << endl;
 
-  cout << endl;
+    cout << oline << endl;
+  }
 
 }
 

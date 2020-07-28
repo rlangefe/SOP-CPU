@@ -15,6 +15,7 @@
 #include "cell_list.h"
 #include "pair_list.h"
 #include "utils.h"
+#include "global.h"
 #include "GPUvars.h"
 
 #include <vector_types.h>
@@ -27,6 +28,40 @@
 #include <thrust/sort.h>
 
 #define SECTION_SIZE 1024
+
+#define CudaCheckError()    __cudaCheckError( __FILE__, __LINE__ )
+#define cudaCheck(error) \
+  if (error != cudaSuccess) { \
+    printf("CUDA Error: %s at %s:%d\n", \
+      cudaGetErrorString(error), \
+      __FILE__, __LINE__); \
+    exit(1); \
+              }
+
+inline void __cudaCheckError( const char *file, const int line )
+{
+#ifdef CUDA_ERROR_CHECK
+    cudaError err = cudaGetLastError();
+    if ( cudaSuccess != err )
+    {
+        fprintf( stderr, "cudaCheckError() failed at %s:%i : %s\n",
+                 file, line, cudaGetErrorString( err ) );
+        exit( -1 );
+    }
+
+    // More careful checking. However, this will affect performance.
+    // Comment away if needed.
+    err = cudaDeviceSynchronize();
+    if( cudaSuccess != err )
+    {
+        fprintf( stderr, "cudaCheckError() with sync failed at %s:%i : %s\n",
+                 file, line, cudaGetErrorString( err ) );
+        exit( -1 );
+    }
+#endif
+
+    return;
+}
 
 int main(int argc,char* argv[])
 {
@@ -128,7 +163,7 @@ void underdamped_ctrl()
   ofstream out(ufname,ios::out|ios::app);
   static int first_time = 1;
 
-  double3* incr = new double3[nbead+1];
+  //double3* incr = new double3[nbead+1];
 
   if( (!restart)&&first_time ) { // zero out the velocities and forces
     for( int i=1; i<=nbead; i++ ) {
@@ -208,25 +243,6 @@ void underdamped_ctrl()
 	      save_coords(cfname,unccfname);
 	      save_vels(vfname);
 	      generator.save_state();
-      }
-      if(debug){
-        if(istep == 3618){
-          sprintf(oline,"Attractive");
-          out << oline << endl;
-          for(int z = 0; z < nil_att+1; z++){
-            sprintf(oline,"ibead: %d\tjbead: %d", ibead_pair_list_att[z], jbead_pair_list_att[z]);
-            out << oline << endl;
-          }
-          
-
-          sprintf(oline,"\nRepulsive");
-          out << oline << endl;
-          for(int z = 0; z < nil_rep+1; z++){
-            sprintf(oline,"ibead: %d\tjbead: %d", ibead_pair_list_rep[z], jbead_pair_list_rep[z]);
-            out << oline << endl;
-          }
-          out << oline << endl;
-        }
       }
 
       istep += 1.0;
@@ -328,20 +344,7 @@ void calculate_observables(double3* increment)
   }
 }
 
-void underdamped_iteration(double3* incr)
-{
-  using namespace std;
-
-  //host_collect();
-
-  static const double eps = 1.0e-5;
-
-  if(usegpu_pos){
-    host_to_device(9);
-  }else{
-    device_to_host(9);
-  }
-
+void underdamped_update_pos(){
   for( int i=1; i<=nbead; i++ ) {
 
     // compute position increments
@@ -365,6 +368,94 @@ void underdamped_iteration(double3* incr)
     unc_pos[i].z += incr[i].z;
 
   }
+}
+
+void underdamped_update_pos_gpu(){
+  int N = nbead+1;
+
+  int threads = (int)min(N, SECTION_SIZE);
+  int blocks = (int)ceil(1.0*N/SECTION_SIZE);
+
+  underdamped_update_pos_kernel<<<blocks, threads>>>(dev_vel, dev_force, dev_pos, dev_unc_pos, dev_incr, a1, a2, boxl, N);
+
+  CudaCheckError();
+
+  cudaDeviceSynchronize();
+}
+
+__global__ void underdamped_update_pos_kernel(double3 *dev_vel, double3 *dev_force, double3 *dev_pos, double3 *dev_unc_pos, double3 *dev_incr, double a1, double a2, double boxl, int N){
+  int i = blockIdx.x * blockDim.x + threadIdx.x;
+  if(i > 0 && i < N){
+    dev_incr[i].x = a1*dev_vel[i].x + a2*dev_force[i].x;
+    dev_incr[i].y = a1*dev_vel[i].y + a2*dev_force[i].y;
+    dev_incr[i].z = a1*dev_vel[i].z + a2*dev_force[i].z;
+    // update bead positions
+
+    dev_pos[i].x += dev_incr[i].x;
+    dev_pos[i].y += dev_incr[i].y;
+    dev_pos[i].z += dev_incr[i].z;
+
+    double rnd_value;
+
+    rnd_value = ( ((dev_pos[i].x/boxl)>0) ? std::floor((dev_pos[i].x/boxl)+0.5) : std::ceil((dev_pos[i].x/boxl)-0.5) );
+    dev_pos[i].x  -= boxl*rnd_value;
+
+    rnd_value = ( ((dev_pos[i].y/boxl)>0) ? std::floor((dev_pos[i].y/boxl)+0.5) : std::ceil((dev_pos[i].y/boxl)-0.5) );
+    dev_pos[i].y -= boxl*rnd_value;
+
+    rnd_value = ( ((dev_pos[i].z/boxl)>0) ? std::floor((dev_pos[i].z/boxl)+0.5) : std::ceil((dev_pos[i].z/boxl)-0.5) );
+    dev_pos[i].z -= boxl*rnd_value;
+
+    dev_unc_pos[i].x += dev_incr[i].x;
+    dev_unc_pos[i].y += dev_incr[i].y;
+    dev_unc_pos[i].z += dev_incr[i].z;
+  }
+}
+
+void underdamped_update_vel(){
+  for( int i=1; i<=nbead; i++ ) {
+    // compute velocity increments
+    vel[i].x = a3*incr[i].x + a4*force[i].x;
+    vel[i].y = a3*incr[i].y + a4*force[i].y;
+    vel[i].z = a3*incr[i].z + a4*force[i].z;
+  }
+}
+
+void underdamped_update_vel_gpu(){
+  int N = nbead+1;
+
+  int threads = (int)min(N, SECTION_SIZE);
+  int blocks = (int)ceil(1.0*N/SECTION_SIZE);
+
+  underdamped_update_vel_kernel<<<blocks, threads>>>(dev_vel, dev_force, dev_incr, a3, a4, N);
+
+  CudaCheckError();
+
+  cudaDeviceSynchronize();
+}
+
+__global__ void underdamped_update_vel_kernel(double3 *dev_vel, double3 *dev_force, double3 *dev_incr, double a3, double a4, int N){
+  int i = blockIdx.x * blockDim.x + threadIdx.x;
+  if(i > 0 && i < N){
+    dev_vel[i].x = a3*dev_incr[i].x + a4*dev_force[i].x;
+    dev_vel[i].y = a3*dev_incr[i].y + a4*dev_force[i].y;
+    dev_vel[i].z = a3*dev_incr[i].z + a4*dev_force[i].z;
+  }
+}
+
+void underdamped_iteration(double3* incr)
+{
+  using namespace std;
+
+  static const double eps = 1.0e-5;
+
+  if(usegpu_pos){
+    host_to_device(9);
+    underdamped_update_pos_gpu();
+  }else{
+    device_to_host(9);
+    underdamped_update_pos();
+  }
 
   // force_update
 
@@ -374,19 +465,12 @@ void underdamped_iteration(double3* incr)
 
   // update_velocities
 
-  //host_collect();
-
   if(usegpu_vel){
     host_to_device(10);
+    underdamped_update_vel_gpu();
   }else{
     device_to_host(10);
-  }
-
-  for( int i=1; i<=nbead; i++ ) {
-    // compute velocity increments
-    vel[i].x = a3*incr[i].x + a4*force[i].x;
-    vel[i].y = a3*incr[i].y + a4*force[i].y;
-    vel[i].z = a3*incr[i].z + a4*force[i].z;
+    underdamped_update_vel();
   }
 }
 

@@ -233,6 +233,9 @@ double end2endsq;
 double rgsq;
 double kinT;
 
+// Increment
+double3 *incr;
+
 double rnd(double x)
 {
   using namespace std;
@@ -297,7 +300,11 @@ double rnd(double x)
 
 	12:	force
 
+	13: incr
 
+	14: vel
+
+	15: pos
 	*/
 
-int variable_location[30] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+int variable_location[30] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};

@@ -79,6 +79,9 @@ extern double3 *dev_pos;
 // Velocity
 extern double3 *dev_vel;
 
+// Position and Velocity
+extern double3 *dev_incr;
+
 void allocate_gpu();
 void host_to_device(int op);
 void device_to_host(int op);

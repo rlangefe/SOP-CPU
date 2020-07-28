@@ -296,11 +296,6 @@ void vdw_energy()
   using namespace std;
 
   device_to_host(2);
-  
-  if(debug){
-    printf("nil_att: %d\nnil_rep: %d\n", nil_att, nil_rep);
-    fflush(stdout);
-  }
 
   int ibead,jbead;
   int itype,jtype;
@@ -594,11 +589,6 @@ void vdw_energy_gpu()
   e_vdw_rr_att = 0.0;
   e_vdw_rr_rep = 0.0;
 
-  if(debug){
-    printf("nil_att: %d\nnil_rep: %d\n", nil_att, nil_rep);
-    fflush(stdout);
-  }
-
   host_to_device(2);
 
   vdw_energy_att_gpu();
@@ -630,11 +620,6 @@ void vdw_energy_att_gpu(){
 	hier_ks_scan(dev_value_double, dev_value_double, N, 0);
 	
 	cudaCheck(cudaMemcpy(&e_vdw_rr_att, &dev_value_double[N-1], sizeof(double), cudaMemcpyDeviceToHost));
-
-  if(debug){
-    printf("e_vdw_rr_att: %f\n", e_vdw_rr_att);
-    fflush(stdout);
-  }
 
   CudaCheckError();
 }
@@ -703,11 +688,6 @@ void vdw_energy_rep_gpu(){
 	hier_ks_scan(dev_value_double, dev_value_double, N, 0);
 
 	cudaCheck(cudaMemcpy(&e_vdw_rr_rep, &dev_value_double[N-1], sizeof(double), cudaMemcpyDeviceToHost));
-
-  if(debug){
-    printf("e_vdw_rr_rep: %f\n", e_vdw_rr_rep);
-    fflush(stdout);
-  }
 
   CudaCheckError();
 }

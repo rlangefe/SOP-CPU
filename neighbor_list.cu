@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <thrust/device_vector.h>
+#include <thrust/device_ptr.h>
 #include <thrust/host_vector.h>
 #include <thrust/copy.h>
 #include <thrust/scan.h>
@@ -361,13 +362,21 @@ void update_neighbor_list_thrust(){
 
     calculate_array_native(boxl, N);
 
+    CudaCheckError();
+
     compact_native_thrust();
+
+    CudaCheckError();
 
     N = ncon_rep+1;
 
     calculate_array_non_native(boxl, N);
 
+    CudaCheckError();
+
     compact_non_native_thrust();
+
+    CudaCheckError();
 }
 
 void compact_native_thrust(){
@@ -381,7 +390,9 @@ void compact_native_thrust(){
 
     // typedef a tuple of these iterators
     typedef thrust::tuple<IntIterator, IntIterator, IntIterator, IntIterator, DoubleIterator, DoubleIterator, DoubleIterator, DoubleIterator> IteratorTuple;
-    typedef thrust::tuple<int *, int *, int *, int *, double *, double *, double *, double *> HostIteratorTuple;
+    //typedef thrust::tuple<int *, int *, int *, int *, double *, double *, double *, double *> HostIteratorTuple;
+    typedef thrust::tuple<thrust::device_ptr<int>, thrust::device_ptr<int>, thrust::device_ptr<int>, thrust::device_ptr<int>,
+                        thrust::device_ptr<double>, thrust::device_ptr<double>, thrust::device_ptr<double>, thrust::device_ptr<double>> HostIteratorTuple;
 
     // typedef the zip_iterator of this tuple
     typedef thrust::zip_iterator<IteratorTuple> ZipIterator;
@@ -412,7 +423,7 @@ void compact_native_thrust(){
 
     ZipIterator dev_initial_begin(thrust::make_tuple(dev_ibead_lj_nat_vec.begin(), dev_jbead_lj_nat_vec.begin(), dev_itype_lj_nat_vec.begin(), dev_jtype_lj_nat_vec.begin(),
                                             dev_lj_nat_pdb_dist_vec.begin(), dev_lj_nat_pdb_dist2_vec.begin(), dev_lj_nat_pdb_dist6_vec.begin(), dev_lj_nat_pdb_dist12_vec.begin()));
-                                            
+              
     ZipIterator dev_initial_end(thrust::make_tuple(dev_ibead_lj_nat_vec.end(), dev_jbead_lj_nat_vec.end(), dev_itype_lj_nat_vec.end(), dev_jtype_lj_nat_vec.end(),
                                             dev_lj_nat_pdb_dist_vec.end(), dev_lj_nat_pdb_dist2_vec.end(), dev_lj_nat_pdb_dist6_vec.end(), dev_lj_nat_pdb_dist12_vec.end()));
 
@@ -422,16 +433,27 @@ void compact_native_thrust(){
 
     nnl_att = thrust::copy_if(dev_initial_begin,  dev_initial_end, dev_value_vec.begin(),  dev_result_begin, (thrust::placeholders::_1 == 1)) - dev_result_begin;
 
-    HostZipIterator host_result_begin(thrust::make_tuple(dev_ibead_neighbor_list_att, dev_jbead_neighbor_list_att, dev_itype_neighbor_list_att,
-                                            dev_jtype_neighbor_list_att, dev_nl_lj_nat_pdb_dist, dev_nl_lj_nat_pdb_dist2, dev_nl_lj_nat_pdb_dist6, dev_nl_lj_nat_pdb_dist12));
+
+    HostZipIterator host_result_begin(thrust::make_tuple(thrust::device_pointer_cast(dev_ibead_neighbor_list_att), 
+                                                        thrust::device_pointer_cast(dev_jbead_neighbor_list_att), 
+                                                        thrust::device_pointer_cast(dev_itype_neighbor_list_att),
+                                                        thrust::device_pointer_cast(dev_jtype_neighbor_list_att), 
+                                                        thrust::device_pointer_cast(dev_nl_lj_nat_pdb_dist), 
+                                                        thrust::device_pointer_cast(dev_nl_lj_nat_pdb_dist2), 
+                                                        thrust::device_pointer_cast(dev_nl_lj_nat_pdb_dist6), 
+                                                        thrust::device_pointer_cast(dev_nl_lj_nat_pdb_dist12)));
 
     ZipIterator dev_result_end(thrust::make_tuple(dev_ibead_neighbor_list_att_vec.begin() + nnl_att, dev_jbead_neighbor_list_att_vec.begin() + nnl_att,
                                                 dev_itype_neighbor_list_att_vec.begin() + nnl_att, dev_jtype_neighbor_list_att_vec.begin() + nnl_att, 
                                                 dev_nl_lj_nat_pdb_dist_vec.begin() + nnl_att, dev_nl_lj_nat_pdb_dist2_vec.begin() + nnl_att, 
                                                 dev_nl_lj_nat_pdb_dist6_vec.begin() + nnl_att, dev_nl_lj_nat_pdb_dist12_vec.begin() + nnl_att));
 
-    thrust::copy(dev_result_begin, dev_result_end, host_result_begin);
+    printf("3\n");
+    fflush(stdout);
 
+    thrust::copy(dev_result_begin, dev_result_end, host_result_begin);
+    printf("3\n");
+    fflush(stdout);
     nnl_att--;
 }
 

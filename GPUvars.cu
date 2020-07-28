@@ -113,6 +113,9 @@ double3 *dev_pos;
 // Velocity
 double3 *dev_vel;
 
+// Position and Velocity
+double3 *dev_incr;
+
 void allocate_gpu(){
     int N;
     int size_int;
@@ -142,36 +145,30 @@ void allocate_gpu(){
         cudaCheck(cudaMalloc((void **)&dev_output_int, size_int));
 
         if(usegpu_nl){
-            if(!strcmp(nl_algorithm,"thrust")){
+            N = ncon_att+1;
+            size_int = N*sizeof(int);
+            size_double = N*sizeof(double);
+            size_double3 = (nbead+1)*sizeof(double3);           
+            // Native
+            cudaCheck(cudaMalloc((void **)&dev_ibead_lj_nat, size_int));
+            cudaCheck(cudaMalloc((void **)&dev_jbead_lj_nat, size_int));
+            cudaCheck(cudaMalloc((void **)&dev_itype_lj_nat, size_int));
+            cudaCheck(cudaMalloc((void **)&dev_jtype_lj_nat, size_int));
+            cudaCheck(cudaMalloc((void **)&dev_lj_nat_pdb_dist, size_double));
+            cudaCheck(cudaMalloc((void **)&dev_lj_nat_pdb_dist2, size_double));
+            cudaCheck(cudaMalloc((void **)&dev_lj_nat_pdb_dist6, size_double));
+            cudaCheck(cudaMalloc((void **)&dev_lj_nat_pdb_dist12, size_double));
+            
+            N = ncon_rep+1;
+            size_int = N*sizeof(int);
+            size_double = N*sizeof(double);
+            size_double3 = (nbead+1)*sizeof(double3);
 
-            }else if(!strcmp(nl_algorithm,"RL")){
-                N = ncon_att+1;
-                size_int = N*sizeof(int);
-                size_double = N*sizeof(double);
-                size_double3 = (nbead+1)*sizeof(double3);           
-                // Native
-                cudaCheck(cudaMalloc((void **)&dev_ibead_lj_nat, size_int));
-                cudaCheck(cudaMalloc((void **)&dev_jbead_lj_nat, size_int));
-                cudaCheck(cudaMalloc((void **)&dev_itype_lj_nat, size_int));
-                cudaCheck(cudaMalloc((void **)&dev_jtype_lj_nat, size_int));
-                cudaCheck(cudaMalloc((void **)&dev_lj_nat_pdb_dist, size_double));
-                cudaCheck(cudaMalloc((void **)&dev_lj_nat_pdb_dist2, size_double));
-                cudaCheck(cudaMalloc((void **)&dev_lj_nat_pdb_dist6, size_double));
-                cudaCheck(cudaMalloc((void **)&dev_lj_nat_pdb_dist12, size_double));
-                
-                N = ncon_rep+1;
-                size_int = N*sizeof(int);
-                size_double = N*sizeof(double);
-                size_double3 = (nbead+1)*sizeof(double3);
-
-                // Non-Native
-                cudaCheck(cudaMalloc((void **)&dev_ibead_lj_non_nat, size_int));	
-                cudaCheck(cudaMalloc((void **)&dev_jbead_lj_non_nat, size_int));
-                cudaCheck(cudaMalloc((void **)&dev_itype_lj_non_nat, size_int));
-                cudaCheck(cudaMalloc((void **)&dev_jtype_lj_non_nat, size_int));
-            }else if(!strcmp(nl_algorithm,"CL")){
-                
-            }
+            // Non-Native
+            cudaCheck(cudaMalloc((void **)&dev_ibead_lj_non_nat, size_int));	
+            cudaCheck(cudaMalloc((void **)&dev_jbead_lj_non_nat, size_int));
+            cudaCheck(cudaMalloc((void **)&dev_itype_lj_non_nat, size_int));
+            cudaCheck(cudaMalloc((void **)&dev_jtype_lj_non_nat, size_int));
         }
 
         if(usegpu_nl || usegpu_pl){
@@ -262,7 +259,7 @@ void allocate_gpu(){
             cudaCheck(cudaMalloc((void **)&dev_kbead_ang, size_int));
         }
 
-        if(usegpu_ss_ang_force || usegpu_fene_force || usegpu_vdw_force || usegpu_vel){
+        if(usegpu_ss_ang_force || usegpu_fene_force || usegpu_vdw_force || usegpu_vel || usegpu_pos){
             N = nbead+1;
             size_int = N*sizeof(int);
             size_double = N*sizeof(double);
@@ -287,6 +284,7 @@ void allocate_gpu(){
             size_double3 = (nbead+1)*sizeof(double3);
 
             cudaCheck(cudaMalloc((void **)&dev_vel, size_double3));
+            cudaCheck(cudaMalloc((void **)&dev_incr, size_double3));
         }
 
 
@@ -704,6 +702,12 @@ void host_to_device(int op){
                 variable_location[12] = 1;
             }
 
+            if(variable_location[13] == 0){
+                cudaCheck(cudaMemcpy(dev_incr, incr, size_double3, cudaMemcpyHostToDevice));
+
+                variable_location[13] = 1;
+            }
+
             if(variable_location[14] == 0){
                 cudaCheck(cudaMemcpy(dev_vel, vel, size_double3, cudaMemcpyHostToDevice));
 
@@ -731,6 +735,12 @@ void host_to_device(int op){
                 variable_location[12] = 1;
             }
 
+            if(variable_location[13] == 0){
+                cudaCheck(cudaMemcpy(dev_incr, incr, size_double3, cudaMemcpyHostToDevice));
+
+                variable_location[13] = 1;
+            }
+
             if(variable_location[14] == 0){
                 cudaCheck(cudaMemcpy(dev_vel, vel, size_double3, cudaMemcpyHostToDevice));
 
@@ -744,10 +754,9 @@ void host_to_device(int op){
     }
 
     if(debug){
-        for(int i = 0; i < 15; i++){
+        for(int i = 0; i < 16; i++){
             printf("%d ", variable_location[i]);
         }
-        //printf(" GPU\n");
         fflush(stdout);
     }
 
@@ -1158,6 +1167,12 @@ void device_to_host(int op){
                 variable_location[12] = 0;
             }
 
+            if(variable_location[13] == 1){
+                cudaCheck(cudaMemcpy(incr, dev_incr, size_double3, cudaMemcpyDeviceToHost));
+
+                variable_location[13] = 0;
+            }
+
             if(variable_location[14] == 1){
                 cudaCheck(cudaMemcpy(vel, dev_vel, size_double3, cudaMemcpyDeviceToHost));
 
@@ -1185,6 +1200,12 @@ void device_to_host(int op){
                 variable_location[12] = 0;
             }
 
+            if(variable_location[13] == 1){
+                cudaCheck(cudaMemcpy(incr, dev_incr, size_double3, cudaMemcpyDeviceToHost));
+
+                variable_location[13] = 0;
+            }
+
             if(variable_location[14] == 1){
                 cudaCheck(cudaMemcpy(vel, dev_vel, size_double3, cudaMemcpyDeviceToHost));
 
@@ -1198,7 +1219,7 @@ void device_to_host(int op){
     }
 
     if(debug){
-        for(int i = 0; i < 15; i++){
+        for(int i = 0; i < 16; i++){
             printf("%d ", variable_location[i]);
         }
         //printf("\n");
@@ -1605,6 +1626,12 @@ void device_to_host_copy(int op){
                 variable_location[12] = 0;
             }
 
+            if(variable_location[13] == 1){
+                cudaCheck(cudaMemcpy(incr, dev_incr, size_double3, cudaMemcpyDeviceToHost));
+
+                variable_location[13] = 0;
+            }
+
             if(variable_location[14] == 1){
                 cudaCheck(cudaMemcpy(vel, dev_vel, size_double3, cudaMemcpyDeviceToHost));
 
@@ -1632,6 +1659,12 @@ void device_to_host_copy(int op){
                 variable_location[12] = 0;
             }
 
+            if(variable_location[13] == 1){
+                cudaCheck(cudaMemcpy(incr, dev_incr, size_double3, cudaMemcpyDeviceToHost));
+
+                variable_location[13] = 0;
+            }
+
             if(variable_location[14] == 1){
                 cudaCheck(cudaMemcpy(vel, dev_vel, size_double3, cudaMemcpyDeviceToHost));
 
@@ -1645,7 +1678,7 @@ void device_to_host_copy(int op){
     }
 
     if(debug){
-        for(int i = 0; i < 15; i++){
+        for(int i = 0; i < 16; i++){
             printf("%d ", variable_location[i]);
         }
         //printf("\n");
