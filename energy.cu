@@ -181,7 +181,7 @@ void set_forces()
     switch(i) {
     case 1:
       if( force_term_on[i] ) {
-        if(usegpu_rand_force){
+        if(usegpu_rand_force == 0){
 	        force_term[++iterm] = &random_force;
         }else{
           force_term[++iterm] = &random_force_gpu;
@@ -594,6 +594,10 @@ void random_force() {
 **********************/
 
 void random_force_gpu(){
+  using namespace std;
+
+  host_to_device(8);
+
   double var = sqrt(2.0*T*zeta/h);
 
   int N = nbead+1;
@@ -608,18 +612,18 @@ void random_force_gpu(){
   
 }
 
-__global__ void rand_kernel(int N, double3 *dev_force, curandState *state, double var){
+__global__ void rand_kernel(int N, double3 *dev_force, curandState *dev_state, double var){
   unsigned int i = blockIdx.x*blockDim.x+threadIdx.x;
   if(i > 0 && i < N){
     // Copy state to local memory for efficiency
-    curandState localState = state[i];
+    curandState localState = dev_state[i];
     
     dev_force[i].x +=  curand_normal(&localState) * var;
     dev_force[i].y +=  curand_normal(&localState) * var;
     dev_force[i].z +=  curand_normal(&localState) * var;
     
     // Copy state back to global memory
-    state[i] = localState;
+    dev_state[i] = localState;
   }
 }
 

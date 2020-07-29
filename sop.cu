@@ -244,11 +244,11 @@ void underdamped_ctrl()
 	      save_coords(cfname,unccfname);
 	      save_vels(vfname);
 	      generator.save_state();
+
+        // Output Current Step
+        printf("Current Step: %.0lf\n", istep);
+        fflush(stdout);
       }
-      
-      // Output Current Step
-      printf("%.0lf\n", istep);
-      fflush(stdout);
 
       istep += 1.0;
       iup++;

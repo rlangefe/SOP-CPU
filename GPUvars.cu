@@ -266,7 +266,7 @@ void allocate_gpu(){
             cudaCheck(cudaMalloc((void **)&dev_kbead_ang, size_int));
         }
 
-        if(usegpu_ss_ang_force || usegpu_fene_force || usegpu_vdw_force || usegpu_vel || usegpu_pos){
+        if(usegpu_ss_ang_force || usegpu_fene_force || usegpu_vdw_force || usegpu_vel || usegpu_pos || usegpu_rand_force){
             N = nbead+1;
             size_int = N*sizeof(int);
             size_double = N*sizeof(double);
@@ -295,7 +295,9 @@ void allocate_gpu(){
         }
 
         if(usegpu_rand_force){
+            printf("Setup Rand\n");
             setup_rng(2718, 0);
+            
         }
 
 
@@ -1826,7 +1828,7 @@ void setup_rng(unsigned long long seed, unsigned long long offset)
   int blocks = (int)ceil(1.0*N/SECTION_SIZE);
   
   cudaDeviceSynchronize();
-  setup_rng_kernel<<<blocks, threads>>>(devStates, seed, offset, nbead);
+  setup_rng_kernel<<<blocks, threads>>>(devStates, seed, offset, N);
   cudaDeviceSynchronize();
   CudaCheckError();
 }
@@ -1835,6 +1837,6 @@ __global__ void setup_rng_kernel(curandState *state, unsigned long long seed, un
   int id = threadIdx.x + blockIdx.x * blockDim.x;
   if(id > 0 && id < N)
   {
-    curand_init(seed + id, 0, offset, &state[id]);
+    curand_init(seed, id, offset, &state[id]);
   }
 }
