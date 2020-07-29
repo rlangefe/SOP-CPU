@@ -72,7 +72,7 @@ set run 2718;
 set restart off;
 set istep_restart 0.0;
 set nstep 10000;
-set nup 100;
+set nup 10000;
 set zeta 5e-2;
 set boxl 750.0;
 set cutofftype neighborlist;
