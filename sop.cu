@@ -389,6 +389,7 @@ __global__ void underdamped_update_pos_kernel(double3 *dev_vel, double3 *dev_for
     dev_incr[i].x = a1*dev_vel[i].x + a2*dev_force[i].x;
     dev_incr[i].y = a1*dev_vel[i].y + a2*dev_force[i].y;
     dev_incr[i].z = a1*dev_vel[i].z + a2*dev_force[i].z;
+    
     // update bead positions
 
     dev_pos[i].x += dev_incr[i].x;

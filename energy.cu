@@ -111,12 +111,16 @@ void force_eval()
 void clear_forces() {
 
   using namespace std;
+  
+  device_to_host(11);
 
   for( int i=1; i<=nbead; i++ ) {
     force[i].x = 0.0;
     force[i].y = 0.0;
     force[i].z = 0.0;
   }
+
+  
 
 }
 

@@ -89,4 +89,6 @@ void device_to_host_copy(int op);
 void host_collect();
 void print_op(int op, int val);
 
+void test_copy();
+
 #endif
