@@ -202,7 +202,9 @@ void compact_native_pl_CL(){
 
     // typedef a tuple of these iterators
     typedef thrust::tuple<IntIterator, IntIterator, IntIterator, IntIterator, DoubleIterator, DoubleIterator, DoubleIterator, DoubleIterator> IteratorTuple;
-    typedef thrust::tuple<int *, int *, int *, int *, double *, double *, double *, double *> HostIteratorTuple;
+    //typedef thrust::tuple<int *, int *, int *, int *, double *, double *, double *, double *> HostIteratorTuple;
+    typedef thrust::tuple<thrust::device_ptr<int>, thrust::device_ptr<int>, thrust::device_ptr<int>, thrust::device_ptr<int>,
+                        thrust::device_ptr<double>, thrust::device_ptr<double>, thrust::device_ptr<double>, thrust::device_ptr<double>> HostIteratorTuple;
 
     // typedef the zip_iterator of this tuple
     typedef thrust::zip_iterator<IteratorTuple> ZipIterator;
@@ -251,8 +253,14 @@ void compact_native_pl_CL(){
 
     nil_att = arrSize;
 
-    HostZipIterator host_result_begin(thrust::make_tuple(dev_ibead_pair_list_att, dev_jbead_pair_list_att, dev_itype_pair_list_att,
-                                            dev_jtype_pair_list_att, dev_pl_lj_nat_pdb_dist, dev_pl_lj_nat_pdb_dist2, dev_pl_lj_nat_pdb_dist6, dev_pl_lj_nat_pdb_dist12));
+    HostZipIterator host_result_begin(thrust::make_tuple(thrust::device_pointer_cast(dev_ibead_pair_list_att), 
+                                                        thrust::device_pointer_cast(dev_jbead_pair_list_att),
+                                                        thrust::device_pointer_cast(dev_itype_pair_list_att),
+                                                        thrust::device_pointer_cast(dev_jtype_pair_list_att),
+                                                        thrust::device_pointer_cast(dev_pl_lj_nat_pdb_dist),
+                                                        thrust::device_pointer_cast(dev_pl_lj_nat_pdb_dist2),
+                                                        thrust::device_pointer_cast(dev_pl_lj_nat_pdb_dist6),
+                                                        thrust::device_pointer_cast(dev_pl_lj_nat_pdb_dist12)));
 
     ZipIterator dev_result_end(thrust::make_tuple(dev_ibead_pair_list_att_vec.begin() + nil_att, dev_jbead_pair_list_att_vec.begin() + nil_att,
                                                 dev_itype_pair_list_att_vec.begin() + nil_att, dev_jtype_pair_list_att_vec.begin() + nil_att, 
@@ -275,7 +283,8 @@ void compact_non_native_pl_CL(){
 
     // typedef a tuple of these iterators
     typedef thrust::tuple<IntIterator, IntIterator, IntIterator, IntIterator> IteratorTuple;
-    typedef thrust::tuple<int *, int *, int *, int *> HostIteratorTuple;
+    //typedef thrust::tuple<int *, int *, int *, int *> HostIteratorTuple;
+    typedef thrust::tuple<thrust::device_ptr<int>, thrust::device_ptr<int>, thrust::device_ptr<int>, thrust::device_ptr<int>> HostIteratorTuple;
 
     // typedef the zip_iterator of this tuple
     typedef thrust::zip_iterator<IteratorTuple> ZipIterator;
@@ -313,7 +322,10 @@ void compact_non_native_pl_CL(){
 
     nil_rep = arrSize;
 
-    HostZipIterator host_result_begin(thrust::make_tuple(dev_ibead_pair_list_rep, dev_jbead_pair_list_rep, dev_itype_pair_list_rep, dev_jtype_pair_list_rep));
+    HostZipIterator host_result_begin(thrust::make_tuple(thrust::device_pointer_cast(dev_ibead_pair_list_rep),
+                                                        thrust::device_pointer_cast(dev_jbead_pair_list_rep),
+                                                        thrust::device_pointer_cast(dev_itype_pair_list_rep),
+                                                        thrust::device_pointer_cast(dev_jtype_pair_list_rep)));
 
     ZipIterator dev_result_end(thrust::make_tuple(dev_ibead_pair_list_rep_vec.begin() + nil_rep, dev_jbead_pair_list_rep_vec.begin() + nil_rep,
                                                 dev_itype_pair_list_rep_vec.begin() + nil_rep, dev_jtype_pair_list_rep_vec.begin() + nil_rep));
@@ -352,7 +364,9 @@ void compact_native_pl_thrust(){
 
     // typedef a tuple of these iterators
     typedef thrust::tuple<IntIterator, IntIterator, IntIterator, IntIterator, DoubleIterator, DoubleIterator, DoubleIterator, DoubleIterator> IteratorTuple;
-    typedef thrust::tuple<int *, int *, int *, int *, double *, double *, double *, double *> HostIteratorTuple;
+    //typedef thrust::tuple<int *, int *, int *, int *, double *, double *, double *, double *> HostIteratorTuple;
+    typedef thrust::tuple<thrust::device_ptr<int>, thrust::device_ptr<int>, thrust::device_ptr<int>, thrust::device_ptr<int>,
+                        thrust::device_ptr<double>, thrust::device_ptr<double>, thrust::device_ptr<double>, thrust::device_ptr<double>> HostIteratorTuple;
 
     // typedef the zip_iterator of this tuple
     typedef thrust::zip_iterator<IteratorTuple> ZipIterator;
@@ -417,7 +431,8 @@ void compact_non_native_pl_thrust(){
 
     // typedef a tuple of these iterators
     typedef thrust::tuple<IntIterator, IntIterator, IntIterator, IntIterator> IteratorTuple;
-    typedef thrust::tuple<int *, int *, int *, int *> HostIteratorTuple;
+    //typedef thrust::tuple<int *, int *, int *, int *> HostIteratorTuple;
+    typedef thrust::tuple<thrust::device_ptr<int>, thrust::device_ptr<int>, thrust::device_ptr<int>, thrust::device_ptr<int>> HostIteratorTuple;
 
     // typedef the zip_iterator of this tuple
     typedef thrust::zip_iterator<IteratorTuple> ZipIterator;
@@ -447,7 +462,10 @@ void compact_non_native_pl_thrust(){
 
     nil_rep = thrust::copy_if(dev_initial_begin,  dev_initial_end, dev_value_vec.begin(),  dev_result_begin, (thrust::placeholders::_1 == 1)) - dev_result_begin;
 
-    HostZipIterator host_result_begin(thrust::make_tuple(dev_ibead_pair_list_rep, dev_jbead_pair_list_rep, dev_itype_pair_list_rep, dev_jtype_pair_list_rep));
+    HostZipIterator host_result_begin(thrust::make_tuple(thrust::device_pointer_cast(dev_ibead_pair_list_rep),
+                                                        thrust::device_pointer_cast(dev_jbead_pair_list_rep),
+                                                        thrust::device_pointer_cast(dev_itype_pair_list_rep),
+                                                        thrust::device_pointer_cast(dev_jtype_pair_list_rep)));
 
     ZipIterator dev_result_end(thrust::make_tuple(dev_ibead_pair_list_rep_vec.begin() + nil_rep, dev_jbead_pair_list_rep_vec.begin() + nil_rep,
                                                 dev_itype_pair_list_rep_vec.begin() + nil_rep, dev_jtype_pair_list_rep_vec.begin() + nil_rep));
