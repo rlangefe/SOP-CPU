@@ -72,7 +72,7 @@ set run 2718;
 set restart off;
 set istep_restart 0.0;
 set nstep 10000;
-set nup 10000;
+set nup 100;
 set zeta 5e-2;
 set boxl 750.0;
 set cutofftype neighborlist;
@@ -86,8 +86,9 @@ set usegpu_fene_energy 1;
 set usegpu_fene_force 1;
 set usegpu_ss_ang_energy 1;
 set usegpu_ss_ang_force 1;
-set usegpu_pos 0;
+set usegpu_pos 1;
 set usegpu_vel 1;
+set usegpu_rand_force 0;
 set nnlup 50;
 set ncell 75.0; lcell = boxl / ncell = ~9.09
 ;
@@ -134,6 +135,7 @@ set usegpu_ss_ang_energy 0;
 set usegpu_ss_ang_force 0;
 set usegpu_pos 0;
 set usegpu_vel 0;
+set usegpu_rand_force 0;
 set nnlup 50;
 set ncell 75.0; lcell = boxl / ncell = ~9.09
 ;
