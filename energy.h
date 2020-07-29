@@ -1,6 +1,9 @@
 #ifndef ENERGY_H
 #define ENERGY_H
 
+#include <curand.h>
+#include <curand_kernel.h>
+
 void set_potential();
 void energy_eval();
 void stacking_energy();
@@ -50,4 +53,7 @@ __global__ void soft_sphere_angular_forces_kernel(int *dev_ibead_ang, int *dev_k
 
 void fene_forces_gpu();
 __global__ void fene_forces_kernel(int *dev_ibead_bnd, int *dev_jbead_bnd, double *dev_pdb_dist, double boxl, int N, double dev_R0sq, double dev_k_bnd, double3 *dev_unc_pos, double3 *dev_force);
+
+void random_force_gpu();
+__global__ void rand_kernel(int N, double3 *dev_force, curandState *state, double var);
 #endif /* ENERGY_H */

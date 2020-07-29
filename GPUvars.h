@@ -2,6 +2,8 @@
 #define GPUVARS_H
 
 #include "global.h"
+#include <curand.h>
+#include <curand_kernel.h>
 
 // General
 extern double3 *dev_unc_pos;
@@ -82,6 +84,9 @@ extern double3 *dev_vel;
 // Position and Velocity
 extern double3 *dev_incr;
 
+// cuRand
+extern curandState *devStates;
+
 void allocate_gpu();
 void host_to_device(int op);
 void device_to_host(int op);
@@ -89,6 +94,7 @@ void device_to_host_copy(int op);
 void host_collect();
 void print_op(int op, int val);
 
-void test_copy();
+void setup_rng(unsigned long long seed, unsigned long long offset);
+__global__ void setup_rng_kernel(curandState *state, unsigned long long seed, unsigned long long offset, int N);
 
 #endif

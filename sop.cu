@@ -6,6 +6,7 @@
 #include <ctime>
 #include <cstdio>
 #include <unistd.h>
+#include <curand.h>
 #include "sop.h"
 #include "random_generator.h"
 #include "energy.h"
@@ -244,6 +245,10 @@ void underdamped_ctrl()
 	      save_vels(vfname);
 	      generator.save_state();
       }
+      
+      // Output Current Step
+      printf("%.0lf\n", istep);
+      fflush(stdout);
 
       istep += 1.0;
       iup++;

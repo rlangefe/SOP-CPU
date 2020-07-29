@@ -166,6 +166,7 @@ extern int usegpu_fene_energy;
 extern int usegpu_fene_force;
 extern int usegpu_pos;
 extern int usegpu_vel;
+extern int usegpu_rand_force;
 extern int neighborlist; // neighbor list cutoff method?
 extern int celllist; // cell list cutoff method?
 extern double minT; // minimum temperature determines crowder cutoffs

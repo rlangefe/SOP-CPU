@@ -7,6 +7,8 @@
 #include "GPUvars.h"
 #include "utils.h"
 #include <stdlib.h> 
+#include <curand.h>
+#include <curand_kernel.h>
 
 #define SECTION_SIZE 1024
 #define CudaCheckError()    __cudaCheckError( __FILE__, __LINE__ )
@@ -179,7 +181,11 @@ void set_forces()
     switch(i) {
     case 1:
       if( force_term_on[i] ) {
-	      force_term[++iterm] = &random_force;
+        if(usegpu_rand_force){
+	        force_term[++iterm] = &random_force;
+        }else{
+          force_term[++iterm] = &random_force_gpu;
+        }
       }
       break;
     case 2:
@@ -587,8 +593,37 @@ void random_force() {
 * Start GPU Functions *
 **********************/
 
-void vdw_energy_gpu()
-{
+void random_force_gpu(){
+  double var = sqrt(2.0*T*zeta/h);
+
+  int N = nbead+1;
+
+  int threads = (int)min(N, SECTION_SIZE);
+  int blocks = (int)ceil(1.0*N/SECTION_SIZE);
+  
+  rand_kernel<<<blocks, threads>>>(N, dev_force, devStates, var);
+  cudaDeviceSynchronize();
+ 
+  CudaCheckError();
+  
+}
+
+__global__ void rand_kernel(int N, double3 *dev_force, curandState *state, double var){
+  unsigned int i = blockIdx.x*blockDim.x+threadIdx.x;
+  if(i > 0 && i < N){
+    // Copy state to local memory for efficiency
+    curandState localState = state[i];
+    
+    dev_force[i].x +=  curand_normal(&localState) * var;
+    dev_force[i].y +=  curand_normal(&localState) * var;
+    dev_force[i].z +=  curand_normal(&localState) * var;
+    
+    // Copy state back to global memory
+    state[i] = localState;
+  }
+}
+
+void vdw_energy_gpu(){
   e_vdw_rr = 0.0;
   e_vdw_rr_att = 0.0;
   e_vdw_rr_rep = 0.0;
