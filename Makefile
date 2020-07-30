@@ -1,4 +1,4 @@
-CC = nvcc -O3 -arch=compute_70 -lineinfo
+CC = nvcc -O3 -arch=sm_60 -lineinfo
 
 EFILE = ./sop.x
 OBJS = ./sop.o ./utils.o ./random_generator.o ./global.o ./energy.o ./io.o ./params.o ./neighbor_list.o ./cell_list.o ./pair_list.o ./GPUvars.o

@@ -536,6 +536,13 @@ void update_neighbor_list_RL(){
 
     CudaCheckError();
 
+    if(nnl_att < 0){
+        printf("nnl_att: %d\n", nnl_att);
+        printf("ncon_att: %d\n", ncon_att);
+        printf("nbead: %d\n", nbead);
+        fflush(stdout);
+    }
+
     assert(nnl_att >= 0);
 	
 	/**********************************
@@ -553,6 +560,13 @@ void update_neighbor_list_RL(){
     nnl_rep = compact_non_native(N) - 1;
 
     CudaCheckError();
+
+    if(nnl_rep < 0){
+        printf("nnl_rep: %d\n", nnl_rep);
+        printf("ncon_rep: %d\n", ncon_rep);
+        printf("nbead: %d\n", nbead);
+        fflush(stdout);
+    }
 
     assert(nnl_rep >= 0);
 }
