@@ -346,11 +346,10 @@ void calculate_observables(double3* increment)
 }
 
 void underdamped_update_pos(){
+  
   for( int i=1; i<=nbead; i++ ) {
-
     // compute position increments
-
-    incr[i].x = a1*vel[i].x + a2*force[i].x;
+    incr[i].x = a1*vel[i].x + a2*force[i].x
     incr[i].y = a1*vel[i].y + a2*force[i].y;
     incr[i].z = a1*vel[i].z + a2*force[i].z;
 
@@ -367,8 +366,8 @@ void underdamped_update_pos(){
     unc_pos[i].x += incr[i].x;
     unc_pos[i].y += incr[i].y;
     unc_pos[i].z += incr[i].z;
-
   }
+
 }
 
 void underdamped_update_pos_gpu(){

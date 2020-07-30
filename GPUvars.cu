@@ -790,6 +790,7 @@ void device_to_host(int op){
 
     if(debug){
         printf("%*d: ", 2, op);
+        fflush(stdout);
     }
 
     if(usegpu_nl || usegpu_pl || usegpu_vdw_energy || usegpu_ss_ang_energy || usegpu_fene_energy || usegpu_vdw_force || usegpu_ss_ang_force || usegpu_fene_force || usegpu_pos || usegpu_vel || usegpu_rand_force){
@@ -1228,11 +1229,6 @@ void device_to_host(int op){
 
         // Clear Forces
         case 11:
-            printf("Check 1\n");
-            fflush(stdout);
-            variable_location[12] = 0;
-            printf("Check 2\n");
-            fflush(stdout);
 
             break;
 
@@ -1247,28 +1243,13 @@ void device_to_host(int op){
         //printf("\n");
         fflush(stdout);
     }
-
-    printf("Check 3\n");
-    fflush(stdout);
-
-    CudaCheckError();
-
-    printf("Check 4\n");
-    fflush(stdout);
     
-    if(usegpu_nl || usegpu_pl || usegpu_vdw_energy || usegpu_ss_ang_energy || usegpu_fene_energy || usegpu_vdw_force || usegpu_ss_ang_force || usegpu_fene_force || usegpu_pos || usegpu_vel || usegpu_rand_force){
-        cudaDeviceSynchronize();
-    }
-
-    printf("Check 5\n");
-    fflush(stdout);
+    cudaDeviceSynchronize();
 
     if(debug){
         print_op(op, 0);
     }
-    
-    printf("Check 6\n");
-    fflush(stdout);
+
 }
 
 
@@ -1741,6 +1722,7 @@ void host_collect(){
             if(debug)
                 printf("\t");
             device_to_host_copy(i);
+            fflush(stdout);
         }
         if(debug)
             printf("host_collect\n");
@@ -1765,13 +1747,7 @@ void print_op(int op, int val){
 
     //printf("%d: ", op);
 
-    printf("Check 7\n");
-    fflush(stdout);
-
     cudaDeviceSynchronize();
-
-    printf("Check 8\n");
-    fflush(stdout);
 
     switch(op){
         // Neighbor List

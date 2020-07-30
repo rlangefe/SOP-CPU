@@ -599,6 +599,7 @@ void init_pos(int nbead)
 
   vel = new double3[nbead+1];
   force = new double3[nbead+1];
+  incr = new double3[nbead+1];
 
   pos_allocated = 1;
   unc_pos_allocated = 1;
