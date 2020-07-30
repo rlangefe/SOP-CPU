@@ -89,6 +89,7 @@ set usegpu_ss_ang_force 1;
 set usegpu_pos 1;
 set usegpu_vel 1;
 set usegpu_rand_force 1;
+set usegpu_clear_force 1;
 set nnlup 50;
 set ncell 75.0; lcell = boxl / ncell = ~9.09
 ;
@@ -136,6 +137,7 @@ set usegpu_ss_ang_force 0;
 set usegpu_pos 0;
 set usegpu_vel 0;
 set usegpu_rand_force 0;
+set usegpu_clear_force 0;
 set nnlup 50;
 set ncell 75.0; lcell = boxl / ncell = ~9.09
 ;
@@ -171,7 +173,7 @@ if __name__ == '__main__':
     # proteins = pypdb.get_all()
 
     #proteins = pypdb.Query('covid').search()
-    proteins = pypdb.Query('6vxx').search()
+    proteins = pypdb.Query('6y2g').search()
     sample = proteins
     #sample_size = int(sys.argv[2])
 

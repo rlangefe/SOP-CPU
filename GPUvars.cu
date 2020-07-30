@@ -140,7 +140,7 @@ void allocate_gpu(){
     size_double = N*sizeof(double);
     size_double3 = (nbead+1)*sizeof(double3);
 
-    if(usegpu_nl || usegpu_pl || usegpu_vdw_energy || usegpu_ss_ang_energy || usegpu_fene_energy || usegpu_vdw_force || usegpu_ss_ang_force || usegpu_fene_force || usegpu_pos || usegpu_vel || usegpu_rand_force){
+    if(usegpu_clear_force || usegpu_nl || usegpu_pl || usegpu_vdw_energy || usegpu_ss_ang_energy || usegpu_fene_energy || usegpu_vdw_force || usegpu_ss_ang_force || usegpu_fene_force || usegpu_pos || usegpu_vel || usegpu_rand_force){
         N = (nbead+1)*(nbead+1);
         size_int = N*sizeof(int);
         size_double = N*sizeof(double);
@@ -267,7 +267,7 @@ void allocate_gpu(){
             cudaCheck(cudaMalloc((void **)&dev_kbead_ang, size_int));
         }
 
-        if(usegpu_ss_ang_force || usegpu_fene_force || usegpu_vdw_force || usegpu_vel || usegpu_pos || usegpu_rand_force){
+        if(usegpu_ss_ang_force || usegpu_fene_force || usegpu_vdw_force || usegpu_vel || usegpu_pos || usegpu_rand_force || usegpu_clear_force){
             N = nbead+1;
             size_int = N*sizeof(int);
             size_double = N*sizeof(double);
@@ -760,6 +760,7 @@ void host_to_device(int op){
         // Clear Forces
         case 11:
             variable_location[12] = 1;
+
             break;
 
         default:

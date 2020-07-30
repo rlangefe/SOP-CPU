@@ -56,4 +56,7 @@ __global__ void fene_forces_kernel(int *dev_ibead_bnd, int *dev_jbead_bnd, doubl
 
 void random_force_gpu();
 __global__ void rand_kernel(int N, double3 *dev_force, curandState *state, double var);
+
+void clear_forces_gpu();
+__global__ void clear_forces_kernel(double3 *dev_force, int N);
 #endif /* ENERGY_H */

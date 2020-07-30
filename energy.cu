@@ -101,8 +101,11 @@ void force_eval()
 
   using namespace std;
   char oline[1024];
-  
-  clear_forces();
+  if(usegpu_clear_force == 0){
+    clear_forces();
+  }else{
+    clear_forces_gpu();
+  }
 
   for( int i=1; i<=nforce_term; i++ ) {
     force_term[i]();
@@ -582,6 +585,37 @@ void random_force() {
 /**********************
 * Start GPU Functions *
 **********************/
+
+void clear_forces_gpu() {
+
+  using namespace std;
+  
+  host_to_device(11);
+
+  int N = nbead+1;
+
+  int threads = (int)min(N, SECTION_SIZE);
+  int blocks = (int)ceil(1.0*N/SECTION_SIZE);
+
+  clear_forces_kernel<<<blocks, threads>>>(dev_force, N);
+
+  cudaDeviceSynchronize();
+
+  CudaCheckError();
+}
+
+__global__ void clear_forces_kernel(double3 *dev_force, int N){
+  int i = blockIdx.x * blockDim.x + threadIdx.x;
+	if(i > 0 && i < N){
+    dev_force[i].x = 0.0;
+    dev_force[i].y = 0.0;
+    dev_force[i].z = 0.0;
+  }else if(i == 0){
+    dev_force[i].x = 0.0;
+    dev_force[i].y = 0.0;
+    dev_force[i].z = 0.0;
+  }
+}
 
 void random_force_gpu(){
   using namespace std;

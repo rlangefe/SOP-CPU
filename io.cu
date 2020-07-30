@@ -255,6 +255,14 @@ void print_sim_params() {
   
   cout << oline << endl;
 
+  if(usegpu_clear_force){
+    sprintf(oline,"Use GPU Clear Force               : %s", "Yes");
+  }else{
+    sprintf(oline,"Use GPU Clear Force               : %s", "No");
+  }
+  
+  cout << oline << endl;
+
   if(usegpu_pos){
     sprintf(oline,"Use GPU Position Update           : %s", "Yes");
   }else{
