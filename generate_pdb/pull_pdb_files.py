@@ -88,7 +88,7 @@ set usegpu_ss_ang_energy 1;
 set usegpu_ss_ang_force 1;
 set usegpu_pos 1;
 set usegpu_vel 1;
-set usegpu_rand_force 0;
+set usegpu_rand_force 1;
 set nnlup 50;
 set ncell 75.0; lcell = boxl / ncell = ~9.09
 ;

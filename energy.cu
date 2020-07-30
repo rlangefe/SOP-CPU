@@ -114,13 +114,25 @@ void clear_forces() {
 
   using namespace std;
   
+  printf("Before Collection\n");
+  fflush(stdout);
+  
   device_to_host(11);
+
+  printf("After Collection\n");
+  fflush(stdout);
+
+  printf("%f\n", force[10].x);
+  fflush(stdout);
 
   for( int i=1; i<=nbead; i++ ) {
     force[i].x = 0.0;
     force[i].y = 0.0;
     force[i].z = 0.0;
   }
+
+  printf("After Clearing\n");
+  fflush(stdout);
 
   
 
@@ -525,8 +537,11 @@ void fene_forces()
 
   using namespace std;
 
+  printf("Before\n");
+  fflush(stdout);
   device_to_host(6);
-
+  printf("After\n");
+  fflush(stdout);
 
   int ibead, jbead;
   double dx, dy, dz, d, dev, dev2;

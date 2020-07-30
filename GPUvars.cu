@@ -1,6 +1,7 @@
 #include "GPUvars.h"
 #include "global.h"
 #include <stdio.h>
+#include <cuda_runtime.h>
 #include <curand.h>
 #include <curand_kernel.h>
 
@@ -138,7 +139,7 @@ void allocate_gpu(){
     size_int = N*sizeof(int);
     size_double = N*sizeof(double);
     size_double3 = (nbead+1)*sizeof(double3);
-    
+
     if(usegpu_nl || usegpu_pl || usegpu_vdw_energy || usegpu_ss_ang_energy || usegpu_fene_energy || usegpu_vdw_force || usegpu_ss_ang_force || usegpu_fene_force || usegpu_pos || usegpu_vel || usegpu_rand_force){
         N = (nbead+1)*(nbead+1);
         size_int = N*sizeof(int);
@@ -791,7 +792,9 @@ void device_to_host(int op){
         printf("%*d: ", 2, op);
     }
 
-    cudaDeviceSynchronize();
+    if(usegpu_nl || usegpu_pl || usegpu_vdw_energy || usegpu_ss_ang_energy || usegpu_fene_energy || usegpu_vdw_force || usegpu_ss_ang_force || usegpu_fene_force || usegpu_pos || usegpu_vel || usegpu_rand_force){
+        cudaDeviceSynchronize();
+    }
 
     switch(op){
         // Neighbor List
@@ -1225,7 +1228,12 @@ void device_to_host(int op){
 
         // Clear Forces
         case 11:
+            printf("Check 1\n");
+            fflush(stdout);
             variable_location[12] = 0;
+            printf("Check 2\n");
+            fflush(stdout);
+
             break;
 
         default:
@@ -1240,13 +1248,27 @@ void device_to_host(int op){
         fflush(stdout);
     }
 
+    printf("Check 3\n");
+    fflush(stdout);
+
     CudaCheckError();
 
-    cudaDeviceSynchronize();
+    printf("Check 4\n");
+    fflush(stdout);
+    
+    if(usegpu_nl || usegpu_pl || usegpu_vdw_energy || usegpu_ss_ang_energy || usegpu_fene_energy || usegpu_vdw_force || usegpu_ss_ang_force || usegpu_fene_force || usegpu_pos || usegpu_vel || usegpu_rand_force){
+        cudaDeviceSynchronize();
+    }
+
+    printf("Check 5\n");
+    fflush(stdout);
 
     if(debug){
         print_op(op, 0);
     }
+    
+    printf("Check 6\n");
+    fflush(stdout);
 }
 
 
@@ -1260,7 +1282,9 @@ void device_to_host_copy(int op){
         printf("%*d: ", 2, op);
     }
 
-    cudaDeviceSynchronize();
+    if(usegpu_nl || usegpu_pl || usegpu_vdw_energy || usegpu_ss_ang_energy || usegpu_fene_energy || usegpu_vdw_force || usegpu_ss_ang_force || usegpu_fene_force || usegpu_pos || usegpu_vel || usegpu_rand_force){
+        cudaDeviceSynchronize();
+    }
 
     switch(op){
         // Neighbor List
@@ -1281,19 +1305,19 @@ void device_to_host_copy(int op){
                 cudaCheck(cudaMemcpy(lj_nat_pdb_dist6, dev_lj_nat_pdb_dist6, size_double, cudaMemcpyDeviceToHost));
                 cudaCheck(cudaMemcpy(lj_nat_pdb_dist12, dev_lj_nat_pdb_dist12, size_double, cudaMemcpyDeviceToHost));
 
-                //variable_location[0] = 0;
+                variable_location[0] = 0;
             }
 
             if(variable_location[1] == 1){
                 cudaCheck(cudaMemcpy(lj_nat_pdb_dist, dev_lj_nat_pdb_dist, size_double, cudaMemcpyDeviceToHost));
                 
-                //variable_location[1] = 0;
+                variable_location[1] = 0;
             }
 
             if(variable_location[2] == 1){
                 cudaCheck(cudaMemcpy(unc_pos, dev_unc_pos, size_double3, cudaMemcpyDeviceToHost));
 
-                //variable_location[2] = 0;
+                variable_location[2] = 0;
             }
 
             N = ncon_rep+1;
@@ -1308,13 +1332,13 @@ void device_to_host_copy(int op){
                 cudaCheck(cudaMemcpy(itype_lj_non_nat, dev_itype_lj_non_nat, size_int, cudaMemcpyDeviceToHost));
                 cudaCheck(cudaMemcpy(jtype_lj_non_nat, dev_jtype_lj_non_nat, size_int, cudaMemcpyDeviceToHost));
 
-                //variable_location[3] = 0;
+                variable_location[3] = 0;
             }
 
             if(variable_location[2] == 1){
                 cudaCheck(cudaMemcpy(unc_pos, dev_unc_pos, size_double3, cudaMemcpyDeviceToHost));
 
-                //variable_location[2] = 0;
+                variable_location[2] = 0;
             }
 
             break;
@@ -1333,13 +1357,13 @@ void device_to_host_copy(int op){
                 cudaCheck(cudaMemcpy(itype_neighbor_list_att, dev_itype_neighbor_list_att, size_int, cudaMemcpyDeviceToHost));
                 cudaCheck(cudaMemcpy(jtype_neighbor_list_att, dev_jtype_neighbor_list_att, size_int, cudaMemcpyDeviceToHost));
 
-                //variable_location[4] = 0;
+                variable_location[4] = 0;
             }
 
             if(variable_location[2] == 1){
                 cudaCheck(cudaMemcpy(unc_pos, dev_unc_pos, size_double3, cudaMemcpyDeviceToHost));
 
-                //variable_location[2] = 0;
+                variable_location[2] = 0;
             }
 
             if(variable_location[5] == 1){
@@ -1348,7 +1372,7 @@ void device_to_host_copy(int op){
                 cudaCheck(cudaMemcpy(nl_lj_nat_pdb_dist6, dev_nl_lj_nat_pdb_dist6, size_double, cudaMemcpyDeviceToHost));
                 cudaCheck(cudaMemcpy(nl_lj_nat_pdb_dist12, dev_nl_lj_nat_pdb_dist12, size_double, cudaMemcpyDeviceToHost));
 
-                //variable_location[5] = 0;
+                variable_location[5] = 0;
             }
 
             N = nnl_rep+1;
@@ -1363,13 +1387,13 @@ void device_to_host_copy(int op){
                 cudaCheck(cudaMemcpy(itype_neighbor_list_rep, dev_itype_neighbor_list_rep, size_int, cudaMemcpyDeviceToHost));
                 cudaCheck(cudaMemcpy(jtype_neighbor_list_rep, dev_jtype_neighbor_list_rep, size_int, cudaMemcpyDeviceToHost));
 
-                //variable_location[6] = 0;
+                variable_location[6] = 0;
             }
 
             if(variable_location[2] == 1){
                 cudaCheck(cudaMemcpy(unc_pos, dev_unc_pos, size_double3, cudaMemcpyDeviceToHost));
 
-                //variable_location[2] = 0;
+                variable_location[2] = 0;
             }
 
             break;
@@ -1392,13 +1416,13 @@ void device_to_host_copy(int op){
                 cudaCheck(cudaMemcpy(pl_lj_nat_pdb_dist6, dev_pl_lj_nat_pdb_dist6, size_double, cudaMemcpyDeviceToHost));
                 cudaCheck(cudaMemcpy(pl_lj_nat_pdb_dist12, dev_pl_lj_nat_pdb_dist12, size_double, cudaMemcpyDeviceToHost));
 
-                //variable_location[7] = 0;
+                variable_location[7] = 0;
             }
             
             if(variable_location[2] == 1){
                 cudaCheck(cudaMemcpy(unc_pos, dev_unc_pos, size_double3, cudaMemcpyDeviceToHost));
 
-                //variable_location[2] = 0;
+                variable_location[2] = 0;
             }
 
             N = nil_rep+1;
@@ -1413,13 +1437,13 @@ void device_to_host_copy(int op){
                 cudaCheck(cudaMemcpy(itype_pair_list_rep, dev_itype_pair_list_rep, size_int, cudaMemcpyDeviceToHost));
                 cudaCheck(cudaMemcpy(jtype_pair_list_rep, dev_jtype_pair_list_rep, size_int, cudaMemcpyDeviceToHost));
 
-                //variable_location[8] = 0;
+                variable_location[8] = 0;
             }
 
             if(variable_location[2] == 1){
                 cudaCheck(cudaMemcpy(unc_pos, dev_unc_pos, size_double3, cudaMemcpyDeviceToHost));
 
-                //variable_location[2] = 0;
+                variable_location[2] = 0;
             }
 
             break;
@@ -1435,19 +1459,19 @@ void device_to_host_copy(int op){
                 cudaCheck(cudaMemcpy(ibead_bnd, dev_ibead_bnd, size_int, cudaMemcpyDeviceToHost));
                 cudaCheck(cudaMemcpy(jbead_bnd, dev_jbead_bnd, size_int, cudaMemcpyDeviceToHost));
 
-                //variable_location[9] = 0;
+                variable_location[9] = 0;
             }
 
             if(variable_location[2] == 1){
                 cudaCheck(cudaMemcpy(unc_pos, dev_unc_pos, size_double3, cudaMemcpyDeviceToHost));
 
-                //variable_location[2] = 0;
+                variable_location[2] = 0;
             }
 
             if(variable_location[10] == 1){
                 cudaCheck(cudaMemcpy(pdb_dist, dev_pdb_dist, size_double, cudaMemcpyDeviceToHost));
 
-                //variable_location[10] = 0;
+                variable_location[10] = 0;
             }
 
             break;
@@ -1463,13 +1487,13 @@ void device_to_host_copy(int op){
                 cudaCheck(cudaMemcpy(ibead_ang, dev_ibead_ang, size_int, cudaMemcpyDeviceToHost));
                 cudaCheck(cudaMemcpy(kbead_ang, dev_kbead_ang, size_int, cudaMemcpyDeviceToHost));
 
-                //variable_location[11] = 0;
+                variable_location[11] = 0;
             }
 
             if(variable_location[2] == 1){
                 cudaCheck(cudaMemcpy(unc_pos, dev_unc_pos, size_double3, cudaMemcpyDeviceToHost));
 
-                //variable_location[2] = 0;
+                variable_location[2] = 0;
             }
             
             break;
@@ -1492,19 +1516,19 @@ void device_to_host_copy(int op){
                 cudaCheck(cudaMemcpy(pl_lj_nat_pdb_dist6, dev_pl_lj_nat_pdb_dist6, size_double, cudaMemcpyDeviceToHost));
                 cudaCheck(cudaMemcpy(pl_lj_nat_pdb_dist12, dev_pl_lj_nat_pdb_dist12, size_double, cudaMemcpyDeviceToHost));
 
-                //variable_location[7] = 0;
+                variable_location[7] = 0;
             }
 
             if(variable_location[2] == 1){
                 cudaCheck(cudaMemcpy(unc_pos, dev_unc_pos, size_double3, cudaMemcpyDeviceToHost));
 
-                //variable_location[2] = 0;
+                variable_location[2] = 0;
             }
 
             if(variable_location[12] == 1){
                 cudaCheck(cudaMemcpy(force, dev_force, size_double3, cudaMemcpyDeviceToHost));
 
-                //variable_location[12] = 0;
+                variable_location[12] = 0;
             }
 
             N = nil_rep+1;
@@ -1519,19 +1543,19 @@ void device_to_host_copy(int op){
                 cudaCheck(cudaMemcpy(itype_pair_list_rep, dev_itype_pair_list_rep, size_int, cudaMemcpyDeviceToHost));
                 cudaCheck(cudaMemcpy(jtype_pair_list_rep, dev_jtype_pair_list_rep, size_int, cudaMemcpyDeviceToHost));
 
-                //variable_location[8] = 0;
+                variable_location[8] = 0;
             }
 
             if(variable_location[2] == 1){
                 cudaCheck(cudaMemcpy(unc_pos, dev_unc_pos, size_double3, cudaMemcpyDeviceToHost));
 
-                //variable_location[2] = 0;
+                variable_location[2] = 0;
             }
 
             if(variable_location[12] == 1){
                 cudaCheck(cudaMemcpy(force, dev_force, size_double3, cudaMemcpyDeviceToHost));
 
-                //variable_location[12] = 0;
+                variable_location[12] = 0;
             }
 
             break;
@@ -1547,32 +1571,32 @@ void device_to_host_copy(int op){
                 cudaCheck(cudaMemcpy(ibead_bnd, dev_ibead_bnd, size_int, cudaMemcpyDeviceToHost));
                 cudaCheck(cudaMemcpy(jbead_bnd, dev_jbead_bnd, size_int, cudaMemcpyDeviceToHost));
 
-                //variable_location[9] = 0;
+                variable_location[9] = 0;
             }
             
             if(variable_location[10] == 1){
                 cudaCheck(cudaMemcpy(pdb_dist, dev_pdb_dist, size_double, cudaMemcpyDeviceToHost));
 
-                //variable_location[10] = 0;
+                variable_location[10] = 0;
             }
 
             if(variable_location[9] == 1){
                 cudaCheck(cudaMemcpy(ibead_bnd, dev_ibead_bnd, size_int, cudaMemcpyDeviceToHost));
                 cudaCheck(cudaMemcpy(jbead_bnd, dev_jbead_bnd, size_int, cudaMemcpyDeviceToHost));
 
-                //variable_location[9] = 0;
+                variable_location[9] = 0;
             }
             
             if(variable_location[2] == 1){
                 cudaCheck(cudaMemcpy(unc_pos, dev_unc_pos, size_double3, cudaMemcpyDeviceToHost));
 
-                //variable_location[2] = 0;
+                variable_location[2] = 0;
             }
 
             if(variable_location[12] == 1){
                 cudaCheck(cudaMemcpy(force, dev_force, size_double3, cudaMemcpyDeviceToHost));
 
-                //variable_location[12] = 0;
+                variable_location[12] = 0;
             }
 
             break;
@@ -1589,19 +1613,19 @@ void device_to_host_copy(int op){
                 cudaCheck(cudaMemcpy(ibead_ang, dev_ibead_ang, size_int, cudaMemcpyDeviceToHost));
                 cudaCheck(cudaMemcpy(kbead_ang, dev_kbead_ang, size_int, cudaMemcpyDeviceToHost));
 
-                //variable_location[11] = 0;
+                variable_location[11] = 0;
             }
 
             if(variable_location[2] == 1){
                 cudaCheck(cudaMemcpy(unc_pos, dev_unc_pos, size_double3, cudaMemcpyDeviceToHost));
 
-                //variable_location[2] = 0;
+                variable_location[2] = 0;
             }
 
             if(variable_location[12] == 1){
                 cudaCheck(cudaMemcpy(force, dev_force, size_double3, cudaMemcpyDeviceToHost));
 
-                //variable_location[12] = 0;
+                variable_location[12] = 0;
             }
 
             break;
@@ -1611,7 +1635,7 @@ void device_to_host_copy(int op){
             if(variable_location[12] == 1){
                 cudaCheck(cudaMemcpy(force, dev_force, size_double3, cudaMemcpyDeviceToHost));
 
-                //variable_location[12] = 0;
+                variable_location[12] = 0;
             }
 
             break;
@@ -1626,31 +1650,31 @@ void device_to_host_copy(int op){
             if(variable_location[2] == 1){
                 cudaCheck(cudaMemcpy(unc_pos, dev_unc_pos, size_double3, cudaMemcpyDeviceToHost));
 
-                //variable_location[2] = 0;
+                variable_location[2] = 0;
             }
 
             if(variable_location[12] == 1){
                 cudaCheck(cudaMemcpy(force, dev_force, size_double3, cudaMemcpyDeviceToHost));
 
-                //variable_location[12] = 0;
+                variable_location[12] = 0;
             }
 
             if(variable_location[13] == 1){
                 cudaCheck(cudaMemcpy(incr, dev_incr, size_double3, cudaMemcpyDeviceToHost));
 
-                //variable_location[13] = 0;
+                variable_location[13] = 0;
             }
 
             if(variable_location[14] == 1){
                 cudaCheck(cudaMemcpy(vel, dev_vel, size_double3, cudaMemcpyDeviceToHost));
 
-                //variable_location[14] = 0;
+                variable_location[14] = 0;
             }
 
             if(variable_location[15] == 1){
                 cudaCheck(cudaMemcpy(pos, dev_pos, size_double3, cudaMemcpyDeviceToHost));
 
-                //variable_location[15] = 0;
+                variable_location[15] = 0;
             }
 
             break;
@@ -1665,26 +1689,25 @@ void device_to_host_copy(int op){
             if(variable_location[12] == 1){
                 cudaCheck(cudaMemcpy(force, dev_force, size_double3, cudaMemcpyDeviceToHost));
 
-                //variable_location[12] = 0;
+                variable_location[12] = 0;
             }
 
             if(variable_location[13] == 1){
                 cudaCheck(cudaMemcpy(incr, dev_incr, size_double3, cudaMemcpyDeviceToHost));
 
-                //variable_location[13] = 0;
+                variable_location[13] = 0;
             }
 
             if(variable_location[14] == 1){
                 cudaCheck(cudaMemcpy(vel, dev_vel, size_double3, cudaMemcpyDeviceToHost));
 
-                //variable_location[14] = 0;
+                variable_location[14] = 0;
             }
 
             break;
 
         // Clear Forces
         case 11:
-            //variable_location[12] = 0;
             
             break;
 
@@ -1702,7 +1725,9 @@ void device_to_host_copy(int op){
 
     CudaCheckError();
 
-    cudaDeviceSynchronize();
+    if(usegpu_nl || usegpu_pl || usegpu_vdw_energy || usegpu_ss_ang_energy || usegpu_fene_energy || usegpu_vdw_force || usegpu_ss_ang_force || usegpu_fene_force || usegpu_pos || usegpu_vel || usegpu_rand_force){
+        cudaDeviceSynchronize();
+    }
 
     if(debug){
         print_op(op, 0);
@@ -1740,7 +1765,13 @@ void print_op(int op, int val){
 
     //printf("%d: ", op);
 
+    printf("Check 7\n");
+    fflush(stdout);
+
     cudaDeviceSynchronize();
+
+    printf("Check 8\n");
+    fflush(stdout);
 
     switch(op){
         // Neighbor List
@@ -1808,6 +1839,10 @@ void print_op(int op, int val){
 
             break;
 
+        case 11:
+            printf("Clearing Forces %s", direction);
+            break;
+
         default:
             break;
     }
@@ -1837,6 +1872,6 @@ __global__ void setup_rng_kernel(curandState *state, unsigned long long seed, un
   int id = threadIdx.x + blockIdx.x * blockDim.x;
   if(id > 0 && id < N)
   {
-    curand_init(seed, id, offset, &state[id]);
+    curand_init(seed + id-1, 0, offset, &state[id]);
   }
 }
