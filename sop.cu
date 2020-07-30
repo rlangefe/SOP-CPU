@@ -349,7 +349,7 @@ void underdamped_update_pos(){
   
   for( int i=1; i<=nbead; i++ ) {
     // compute position increments
-    incr[i].x = a1*vel[i].x + a2*force[i].x
+    incr[i].x = a1*vel[i].x + a2*force[i].x;
     incr[i].y = a1*vel[i].y + a2*force[i].y;
     incr[i].z = a1*vel[i].z + a2*force[i].z;
 
