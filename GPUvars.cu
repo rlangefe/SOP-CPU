@@ -1229,6 +1229,8 @@ void device_to_host(int op){
 
         // Clear Forces
         case 11:
+        
+            variable_location[12] = 0;
 
             break;
 
@@ -1706,9 +1708,7 @@ void device_to_host_copy(int op){
 
     CudaCheckError();
 
-    if(usegpu_nl || usegpu_pl || usegpu_vdw_energy || usegpu_ss_ang_energy || usegpu_fene_energy || usegpu_vdw_force || usegpu_ss_ang_force || usegpu_fene_force || usegpu_pos || usegpu_vel || usegpu_rand_force){
-        cudaDeviceSynchronize();
-    }
+    cudaDeviceSynchronize();
 
     if(debug){
         print_op(op, 0);
