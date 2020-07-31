@@ -15,8 +15,8 @@ class coord {
 extern int debug;
 
 // Benchmarking
-extern double nl_time = 0.0;
-extern double pl_time = 0.0;
+extern double nl_time;
+extern double pl_time;
 extern double vdw_energy_time;
 extern double vdw_forces_time;
 extern double fene_energy_time;

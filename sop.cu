@@ -7,6 +7,7 @@
 #include <cstdio>
 #include <unistd.h>
 #include <curand.h>
+#include <iomanip>
 #include "sop.h"
 #include "random_generator.h"
 #include "energy.h"
@@ -95,6 +96,8 @@ int main(int argc,char* argv[])
   cout << "+-------------------+" << endl;
   cout << "Wall Time                 : " << difftime(tm1,tm0) << " sec" << endl;
 
+  std::cout << std::fixed << std::setprecision(15);
+  
   cout << "NL Compute Time           : " << nl_time << " sec" << endl;
   cout << "PL Compute Time           : " << pl_time << " sec" << endl;
   cout << "VDW Energy Compute Time   : " << vdw_energy_time << " sec" << endl;
@@ -105,7 +108,7 @@ int main(int argc,char* argv[])
   cout << "SS Ang Forces Compute Time: " << ss_ang_forces_time << " sec" << endl;
   cout << "Update Pos Compute Time   : " << update_pos_time << " sec" << endl;
   cout << "Update Vel Compute Time   : " << update_vel_time << " sec" << endl;
-  cout << "Clear Forces Compute Time : " << clear_forces_time << " sec" << end;
+  cout << "Clear Forces Compute Time : " << clear_forces_time << " sec" << endl;
   cout << "Random Forces Compute Time: " << rng_time << " sec" << endl;
 
   cout << "Total Computation Time    : " << float(ck1-ck0)/CLOCKS_PER_SEC << " sec" << endl;
