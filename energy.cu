@@ -1,6 +1,7 @@
 #include <cstdlib>
 #include <math.h>
 #include <cstdio>
+#include <ctime>
 #include <cuda_runtime.h>
 #include "global.h"
 #include "energy.h"
@@ -83,7 +84,7 @@ __device__ __constant__ double dev_rcut_nat[3][3] = {
 
 void energy_eval()
 {
-
+  
   using namespace std;
   char oline[1024];
 
@@ -114,7 +115,7 @@ void force_eval()
 }
 
 void clear_forces() {
-
+  clock_t ck0 = clock();
   using namespace std;
   
   device_to_host(11);
@@ -124,6 +125,8 @@ void clear_forces() {
     force[i].y = 0.0;
     force[i].z = 0.0;
   }
+  clock_t ck1 = clock()-ck0;
+  clear_forces_time+= ((double)ck1)/CLOCKS_PER_SEC;
 }
 
 void set_potential() {
@@ -224,7 +227,7 @@ void set_forces()
 
 void fene_energy()
 {
-
+  clock_t ck0 = clock();
   using namespace std;
 
   device_to_host(3);
@@ -254,18 +257,19 @@ void fene_energy()
     dev = d-pdb_dist[i];
 
     e_bnd += log1p(-dev*dev/R0sq); // log1p(x) = log(1-x)
-
   }
 
   e_bnd *= -e_bnd_coeff;
+  clock_t ck1 = clock()-ck0;
 
+  fene_energy_time+= ((double)ck1)/CLOCKS_PER_SEC;
   return;
 
 }
 
 void soft_sphere_angular_energy()
 {
-
+  clock_t ck0 = clock();
   using namespace std;
 
   device_to_host(4);
@@ -295,6 +299,8 @@ void soft_sphere_angular_energy()
 
     e_ang_ss += e_ang_ss_coeff/d6;
   }
+  clock_t ck1 = clock()-ck0;
+  ss_ang_energy_time+= ((double)ck1)/CLOCKS_PER_SEC;
 
   return;
 
@@ -302,7 +308,7 @@ void soft_sphere_angular_energy()
 
 void vdw_energy()
 {
-
+  clock_t ck0 = clock();
   using namespace std;
 
   device_to_host(2);
@@ -367,6 +373,9 @@ void vdw_energy()
   }
 
   e_vdw_rr = e_vdw_rr_att + e_vdw_rr_rep;
+  clock_t ck1 = clock()-ck0;
+
+  vdw_energy_time+= ((double)ck1)/CLOCKS_PER_SEC;
 
   return;
 
@@ -374,7 +383,7 @@ void vdw_energy()
 
 void vdw_forces()
 {
-
+  clock_t ck0 = clock();
   using namespace std;
 
   device_to_host(5);
@@ -467,12 +476,13 @@ void vdw_forces()
     force[jbead].z -= fz;
 
   }
-
+  clock_t ck1 = clock()-ck0;
+  vdw_forces_time+= ((double)ck1)/CLOCKS_PER_SEC;
 }
 
 void soft_sphere_angular_forces()
 {
-
+  clock_t ck0 = clock();
   char line[2048];
 
   int ibead,kbead;
@@ -513,12 +523,14 @@ void soft_sphere_angular_forces()
       force[kbead].z += fz;
 
   }
+  clock_t ck1 = clock()-ck0;
+  ss_ang_forces_time+= ((double)ck1)/CLOCKS_PER_SEC;
 
 }
 
 void fene_forces()
 {
-
+  clock_t ck0 = clock();
   using namespace std;
 
   int ibead, jbead;
@@ -559,11 +571,12 @@ void fene_forces()
     force[jbead].z += fz;
 
   }
-  
+  clock_t ck1 = clock()-ck0;
+  fene_forces_time+= ((double)ck1)/CLOCKS_PER_SEC;
 }
 
 void random_force() {
-
+  clock_t ck0 = clock();
   using namespace std;
 
   device_to_host(8);
@@ -579,7 +592,8 @@ void random_force() {
     force[i].z += var*generator.gasdev();
 
   }
-
+  clock_t ck1 = clock()-ck0;
+  rng_time+= ((double)ck1)/CLOCKS_PER_SEC;
 }
 
 /**********************
@@ -587,7 +601,7 @@ void random_force() {
 **********************/
 
 void clear_forces_gpu() {
-
+  clock_t ck0 = clock();
   using namespace std;
   
   host_to_device(11);
@@ -602,6 +616,8 @@ void clear_forces_gpu() {
   cudaDeviceSynchronize();
 
   CudaCheckError();
+  clock_t ck1 = clock()-ck0;
+  clear_forces_time+= ((double)ck1)/CLOCKS_PER_SEC;
 }
 
 __global__ void clear_forces_kernel(double3 *dev_force, int N){
@@ -618,6 +634,7 @@ __global__ void clear_forces_kernel(double3 *dev_force, int N){
 }
 
 void random_force_gpu(){
+  clock_t ck0 = clock();
   using namespace std;
 
   host_to_device(8);
@@ -633,7 +650,8 @@ void random_force_gpu(){
   cudaDeviceSynchronize();
  
   CudaCheckError();
-  
+  clock_t ck1 = clock()-ck0;
+  rng_time+= ((double)ck1)/CLOCKS_PER_SEC;
 }
 
 __global__ void rand_kernel(int N, double3 *dev_force, curandState *dev_state, double var){
@@ -652,6 +670,7 @@ __global__ void rand_kernel(int N, double3 *dev_force, curandState *dev_state, d
 }
 
 void vdw_energy_gpu(){
+  clock_t ck0 = clock();
   e_vdw_rr = 0.0;
   e_vdw_rr_att = 0.0;
   e_vdw_rr_rep = 0.0;
@@ -667,6 +686,9 @@ void vdw_energy_gpu(){
   CudaCheckError();
 
   e_vdw_rr = e_vdw_rr_att + e_vdw_rr_rep;
+
+  clock_t ck1 = clock()-ck0;
+  vdw_energy_time+= ((double)ck1)/CLOCKS_PER_SEC;
 
   return;
 }
@@ -972,6 +994,7 @@ __global__ void sumIt (double *Y, double *S, int InputSize) {
 
 void vdw_forces_gpu()
 {
+  clock_t ck0 = clock();
   using namespace std;
 
   host_to_device(5);
@@ -983,6 +1006,8 @@ void vdw_forces_gpu()
   vdw_forces_rep_gpu();
 
   CudaCheckError();
+  clock_t ck1 = clock()-ck0;
+  vdw_forces_time+= ((double)ck1)/CLOCKS_PER_SEC;
 }
 
 void vdw_forces_att_gpu(){	
@@ -1171,6 +1196,7 @@ __global__ void vdw_forces_rep_kernel(int *dev_ibead_pair_list_rep, int *dev_jbe
 }
 
 void fene_energy_gpu(){	
+  clock_t ck0 = clock();
   host_to_device(3);
 
 	int N = nbnd+1;
@@ -1194,6 +1220,9 @@ void fene_energy_gpu(){
   CudaCheckError();
 	
 	e_bnd *= -e_bnd_coeff;
+
+  clock_t ck1 = clock()-ck0;
+  fene_energy_time+= ((double)ck1)/CLOCKS_PER_SEC;
 
 	return;
 }
@@ -1239,6 +1268,7 @@ __global__ void fene_energy_gpu_kernel(int *dev_ibead_bnd, int *dev_jbead_bnd, d
 
 
 void soft_sphere_angular_energy_gpu(){
+  clock_t ck0 = clock();
   host_to_device(4);
 
 	e_ang_ss = 0.0;
@@ -1262,6 +1292,8 @@ void soft_sphere_angular_energy_gpu(){
 	cudaMemcpy(&e_ang_ss, &dev_value_double[N-1], sizeof(double), cudaMemcpyDeviceToHost);
 
   CudaCheckError();
+  clock_t ck1 = clock()-ck0;
+  ss_ang_energy_time+= ((double)ck1)/CLOCKS_PER_SEC;
 }
 
 __global__ void soft_sphere_angular_energy_gpu_kernel(int *dev_ibead_ang, int *dev_kbead_ang, double3 *dev_unc_pos, int boxl, int N, double coeff, double *dev_result){
@@ -1381,6 +1413,7 @@ __global__ void soft_sphere_angular_forces_kernel(int *dev_ibead_ang, int *dev_k
 }
 
 void fene_forces_gpu(){
+  clock_t ck0 = clock();
   host_to_device(6);
 
 	int N = nbnd + 1;
@@ -1395,6 +1428,8 @@ void fene_forces_gpu(){
 	fene_forces_kernel<<<blocks, threads>>>(dev_ibead_bnd, dev_jbead_bnd, dev_pdb_dist, boxl, N, R0sq, k_bnd, dev_unc_pos, dev_force);
 
   CudaCheckError();
+  clock_t ck1 = clock()-ck0;
+  fene_forces_time+= ((double)ck1)/CLOCKS_PER_SEC;
 }
 
 __global__ void fene_forces_kernel(int *dev_ibead_bnd, int *dev_jbead_bnd, double *dev_pdb_dist, double boxl, int N, double dev_R0sq, double dev_k_bnd, double3 *dev_unc_pos, double3 *dev_force){

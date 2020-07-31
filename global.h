@@ -14,6 +14,20 @@ class coord {
 
 extern int debug;
 
+// Benchmarking
+extern double nl_time = 0.0;
+extern double pl_time = 0.0;
+extern double vdw_energy_time;
+extern double vdw_forces_time;
+extern double fene_energy_time;
+extern double fene_forces_time;
+extern double ss_ang_energy_time;
+extern double ss_ang_forces_time;
+extern double update_pos_time;
+extern double update_vel_time;
+extern double clear_forces_time;
+extern double rng_time;
+
 const int mcmd = 100; // maximum number of input commands
 const int mopt = 10; // maximum number of options associated with a command
 const int mopt_tot = mcmd*mopt; // max total number of options

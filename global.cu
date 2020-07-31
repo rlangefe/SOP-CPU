@@ -14,6 +14,20 @@ coord::~coord() {
 }
 int debug = 0;
 
+// Benchmarking
+double nl_time = 0.0;
+double pl_time = 0.0;
+double vdw_energy_time = 0.0;
+double vdw_forces_time = 0.0;
+double fene_energy_time = 0.0;
+double fene_forces_time = 0.0;
+double ss_ang_energy_time = 0.0;
+double ss_ang_forces_time = 0.0;
+double update_pos_time = 0.0;
+double update_vel_time = 0.0;
+double clear_forces_time = 0.0;
+double rng_time = 0.0;
+
 int ncmd;
 char cmd[mcmd+1][mwdsize];
 char opt[mopt_tot+1][mwdsize];

@@ -93,10 +93,25 @@ int main(int argc,char* argv[])
   cout << "+-------------------+" << endl;
   cout << "| Simulation Stats: |" << endl;
   cout << "+-------------------+" << endl;
-  cout << "Wall Time              : " << difftime(tm1,tm0) << " sec" << endl;
-  cout << "Total Computation Time : " << float(ck1-ck0)/CLOCKS_PER_SEC << " sec" << endl;
-  cout << "Computation Rate       : " << float(ck1-ck0)/CLOCKS_PER_SEC/nstep << " sec / timestep" << endl;
-  cout << "CURRENT TIME IS        : " << ctime(&tm1);
+  cout << "Wall Time                 : " << difftime(tm1,tm0) << " sec" << endl;
+
+  cout << "NL Compute Time           : " << nl_time << " sec" << endl;
+  cout << "PL Compute Time           : " << pl_time << " sec" << endl;
+  cout << "VDW Energy Compute Time   : " << vdw_energy_time << " sec" << endl;
+  cout << "VDW Forces Compute Time   : " << vdw_forces_time << " sec" << endl;
+  cout << "Fene Energy Compute Time  : " << fene_energy_time << " sec" << endl;
+  cout << "Fene Forces Compute Time  : " << fene_forces_time << " sec" << endl;
+  cout << "SS Ang Energy Compute Time: " << ss_ang_energy_time << " sec" << endl;
+  cout << "SS Ang Forces Compute Time: " << ss_ang_forces_time << " sec" << endl;
+  cout << "Update Pos Compute Time   : " << update_pos_time << " sec" << endl;
+  cout << "Update Vel Compute Time   : " << update_vel_time << " sec" << endl;
+  cout << "Clear Forces Compute Time : " << clear_forces_time << " sec" << end;
+  cout << "Random Forces Compute Time: " << rng_time << " sec" << endl;
+
+  cout << "Total Computation Time    : " << float(ck1-ck0)/CLOCKS_PER_SEC << " sec" << endl;
+
+  cout << "Computation Rate          : " << float(ck1-ck0)/CLOCKS_PER_SEC/nstep << " sec / timestep" << endl;
+  cout << "CURRENT TIME IS           : " << ctime(&tm1);
 
   return 0;
 
@@ -346,7 +361,7 @@ void calculate_observables(double3* increment)
 }
 
 void underdamped_update_pos(){
-  
+  clock_t ck0 = clock();
   for( int i=1; i<=nbead; i++ ) {
     // compute position increments
     incr[i].x = a1*vel[i].x + a2*force[i].x;
@@ -367,10 +382,13 @@ void underdamped_update_pos(){
     unc_pos[i].y += incr[i].y;
     unc_pos[i].z += incr[i].z;
   }
+  clock_t ck1 = clock()-ck0;
+  update_pos_time+= ((double)ck1)/CLOCKS_PER_SEC;
 
 }
 
 void underdamped_update_pos_gpu(){
+  clock_t ck0 = clock();
   int N = nbead+1;
 
   int threads = (int)min(N, SECTION_SIZE);
@@ -381,6 +399,8 @@ void underdamped_update_pos_gpu(){
   CudaCheckError();
 
   cudaDeviceSynchronize();
+  clock_t ck1 = clock()-ck0;
+  update_pos_time+= ((double)ck1)/CLOCKS_PER_SEC;
 }
 
 __global__ void underdamped_update_pos_kernel(double3 *dev_vel, double3 *dev_force, double3 *dev_pos, double3 *dev_unc_pos, double3 *dev_incr, double a1, double a2, double boxl, int N){
@@ -414,15 +434,19 @@ __global__ void underdamped_update_pos_kernel(double3 *dev_vel, double3 *dev_for
 }
 
 void underdamped_update_vel(){
+  clock_t ck0 = clock();
   for( int i=1; i<=nbead; i++ ) {
     // compute velocity increments
     vel[i].x = a3*incr[i].x + a4*force[i].x;
     vel[i].y = a3*incr[i].y + a4*force[i].y;
     vel[i].z = a3*incr[i].z + a4*force[i].z;
   }
+  clock_t ck1 = clock()-ck0;
+  update_vel_time+= ((double)ck1)/CLOCKS_PER_SEC;
 }
 
 void underdamped_update_vel_gpu(){
+  clock_t ck0 = clock();
   int N = nbead+1;
 
   int threads = (int)min(N, SECTION_SIZE);
@@ -433,6 +457,8 @@ void underdamped_update_vel_gpu(){
   CudaCheckError();
 
   cudaDeviceSynchronize();
+  clock_t ck1 = clock()-ck0;
+  update_vel_time+= ((double)ck1)/CLOCKS_PER_SEC;
 }
 
 __global__ void underdamped_update_vel_kernel(double3 *dev_vel, double3 *dev_force, double3 *dev_incr, double a3, double a4, int N){
@@ -614,6 +640,7 @@ void overdamped_ctrl()
 }
 
 void run_pair_list_update(){
+  clock_t ck0 = clock();
   using namespace std;
   if(usegpu_pl == 0){
     update_pair_list();
@@ -629,6 +656,8 @@ void run_pair_list_update(){
       exit(-1);
     }
   }
+  clock_t ck1 = clock()-ck0;
+  pl_time+= ((double)ck1)/CLOCKS_PER_SEC;
 }
 
 void run_cell_list_update(){
@@ -638,6 +667,7 @@ void run_cell_list_update(){
 }
 
 void run_neighbor_list_update(){
+  clock_t ck0 = clock();
   using namespace std;
   if(usegpu_nl == 0){
     update_neighbor_list();
@@ -653,4 +683,6 @@ void run_neighbor_list_update(){
       exit(-1);
     }
   }
+  clock_t ck1 = clock()-ck0;
+  nl_time+= ((double)ck1)/CLOCKS_PER_SEC;
 }

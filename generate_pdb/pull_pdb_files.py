@@ -3,9 +3,15 @@ import random
 import os
 import sys
 import subprocess
+import re
+import traceback
+import shutil
+
+global curr = 0
 
 def create_file_set(p):
-    print('Pulling ' + p)
+    curr+=1
+    print(str(curr) + ' Pulling ' + p)
 
     # Get PDB File
     pdb_file = pypdb.get_pdb_file(p)
@@ -63,10 +69,19 @@ def pull_and_generate(p):
         # Get and Generate Required Files
         create_file_set(p)
 
+        data = open(target + '/' + p + '/DATA/' + p + '_init.xyz', 'r').read()
+
+        beads = int(re.search('nbead +(\d+)\n', data).group(1))
+
+        output_str = p + ',' + str(beads) + '\n'
+
+        with open(target + '/pull_pdb_output.log', 'a') as f:
+            f.write(output_str)
+
         # Create Input Files
         for i in ['RL', 'thrust', 'CL']:
             print('\tCreating ' + i + ' Input File')
-            str = '''set dynamics underdamped;
+            output_str = '''set dynamics underdamped;
 set temp 0.60;
 set run 2718;
 set restart off;
@@ -111,12 +126,12 @@ run;
     '''
 
             with open(target + '/' + p + '/INPUT/input_nl_' + i, 'w') as f:
-                f.write(str)
+                f.write(output_str)
 
 
         print('\tCreating CPU Input File')
 
-        str = '''set dynamics underdamped;
+        output_str = '''set dynamics underdamped;
 set temp 0.60;
 set run 2718;
 set restart off;
@@ -159,9 +174,21 @@ run;
 '''
 
         with open(target + '/' + p + '/INPUT/input_nl', 'w') as f:
-            f.write(str)
-    except:
+            f.write(output_str)
+    except KeyboardInterrupt:
+        # quit
+        sys.exit()
+    except Exception as e:
+        exc_type, exc_obj, exc_tb = sys.exc_info()
+        tb = traceback.extract_tb(exc_tb)[-1]
         print('An error occurred with ' + p)
+        print(e)
+        print(exc_type, tb[2], tb[1])
+            
+        if os.path.isdir(target + '/' + p):
+            shutil.rmtree(target + '/' + p)
+
+        
 
 
 
@@ -177,13 +204,12 @@ if __name__ == '__main__':
     sample = proteins
     #sample_size = int(sys.argv[2])
 
-    #sample = random.sample(proteins, sample_size)
-    str = ''
-    for p in sample:
-        str = str + p + '\n'
+    sample = [x.upper() for x in open('../../coronavirus_structural_task_force/pdb/list.txt').read().splitlines()]
 
+    #sample = random.sample(proteins, sample_size)
+    output_str = 'Name,Nbead\n'
     with open(target + '/pull_pdb_output.log', 'w+') as f:
-        f.write(str)
+        f.write(output_str)
             
     for p in sample:
         pull_and_generate(p)
