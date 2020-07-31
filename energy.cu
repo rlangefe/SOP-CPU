@@ -1355,7 +1355,7 @@ void soft_sphere_angular_forces_gpu(){
 
   CudaCheckError();
   clock_t ck1 = clock()-ck0;
-  ss_ang_energy_time+= ((double)ck1)/CLOCKS_PER_SEC;
+  ss_ang_forces_time+= ((double)ck1)/CLOCKS_PER_SEC;
 }
 
 __global__ void soft_sphere_angular_forces_kernel(int *dev_ibead_ang, int *dev_kbead_ang, double boxl, int N, double f_ang_ss_coeff, double3 *dev_unc_pos, double3 *dev_force){
