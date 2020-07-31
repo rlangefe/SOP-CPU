@@ -96,7 +96,7 @@ int main(int argc,char* argv[])
   cout << "+-------------------+" << endl;
   cout << "Wall Time                 : " << difftime(tm1,tm0) << " sec" << endl;
 
-  std::cout << std::fixed << std::setprecision(15);
+  std::cout << std::fixed << std::setprecision(30);
   
   cout << "NL Compute Time           : " << nl_time << " sec" << endl;
   cout << "PL Compute Time           : " << pl_time << " sec" << endl;
