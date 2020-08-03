@@ -1849,6 +1849,6 @@ __global__ void setup_rng_kernel(curandState *state, unsigned long long seed, un
   int id = threadIdx.x + blockIdx.x * blockDim.x;
   if(id > 0 && id < N)
   {
-    curand_init(seed + id-1, 0, offset, &state[id]);
+    curand_init(seed+id, 0, offset, &state[id]);
   }
 }

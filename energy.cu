@@ -654,6 +654,7 @@ void random_force_gpu(){
   rng_time+= ((double)ck1)/CLOCKS_PER_SEC;
 }
 
+/*
 __global__ void rand_kernel(int N, double3 *dev_force, curandState *dev_state, double var){
   unsigned int i = blockIdx.x*blockDim.x+threadIdx.x;
   if(i > 0 && i < N){
@@ -663,6 +664,47 @@ __global__ void rand_kernel(int N, double3 *dev_force, curandState *dev_state, d
     dev_force[i].x +=  curand_normal(&localState) * var;
     dev_force[i].y +=  curand_normal(&localState) * var;
     dev_force[i].z +=  curand_normal(&localState) * var;
+    
+    // Copy state back to global memory
+    dev_state[i] = localState;
+  }
+}*/
+
+__global__ void rand_kernel(int N, double3 *dev_force, curandState *dev_state, double var){
+  unsigned int i = blockIdx.x*blockDim.x+threadIdx.x;
+  if(i > 0 && i < N){
+    // Copy state to local memory for efficiency
+    curandState localState = dev_state[i];
+
+    double fac,rsq,v1,v2;
+
+    do{
+      v1=2.0*(double)curand_normal_double(&localState)-1.0;
+      v2=2.0*(double)curand_normal_double(&localState)-1.0;
+      rsq=v1*v1+v2*v2;
+    } while( rsq>=1.0||rsq==0.0 );
+    fac=sqrt( -2.0*log(rsq)/rsq );
+    
+    dev_force[i].x +=   (double)(v2 * fac * var);
+
+    do{
+      v1=2.0*(double)curand_normal_double(&localState)-1.0;
+      v2=2.0*(double)curand_normal_double(&localState)-1.0;
+      rsq=v1*v1+v2*v2;
+    } while( rsq>=1.0||rsq==0.0 );
+    fac=sqrt( -2.0*log(rsq)/rsq );
+
+    dev_force[i].y +=  (double)(v2 * fac * var);
+
+    do{
+      v1=2.0*(double)curand_normal_double(&localState)-1.0;
+      v2=2.0*(double)curand_normal_double(&localState)-1.0;
+      rsq=v1*v1+v2*v2;
+    } while( rsq>=1.0||rsq==0.0 );
+    fac=sqrt( -2.0*log(rsq)/rsq );
+    
+
+    dev_force[i].z +=  (double)(v2 * fac * var);
     
     // Copy state back to global memory
     dev_state[i] = localState;

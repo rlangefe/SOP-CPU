@@ -348,6 +348,10 @@ void calculate_observables(double3* increment)
     for( int i=1; i<=nbead; i++ ) {
       sumvsq += vel[i].x*vel[i].x	+ vel[i].y*vel[i].y	+ vel[i].z*vel[i].z;
     }
+    if(debug){
+      printf("nbead: %d\tsumvsq: %f\n", nbead, sumvsq);
+      fflush(stdout);
+    }
     kinT = sumvsq/(3.0*double(nbead));
   } else if( sim_type == 2 ) {
     sumvsq = 0.0;

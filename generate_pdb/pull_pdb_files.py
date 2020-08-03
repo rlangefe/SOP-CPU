@@ -7,11 +7,9 @@ import re
 import traceback
 import shutil
 
-global curr = 0
-
 def create_file_set(p):
-    curr+=1
-    print(str(curr) + ' Pulling ' + p)
+    
+    print(' Pulling ' + p)
 
     # Get PDB File
     pdb_file = pypdb.get_pdb_file(p)
@@ -50,7 +48,7 @@ def create_file_set(p):
     print('\tWriting ' + p + ' Init File')
     f.close()
 
-def pull_and_generate(p):
+def pull_and_generate(p, target):
     try:
         # Create Directories
 
@@ -172,22 +170,26 @@ set rgenfname OUTPUT/''' + p + '''.0.60.2718.rgen.dat;
 ;
 run;
 '''
-
         with open(target + '/' + p + '/INPUT/input_nl', 'w') as f:
             f.write(output_str)
+            
     except KeyboardInterrupt:
         # quit
         sys.exit()
+
     except Exception as e:
         exc_type, exc_obj, exc_tb = sys.exc_info()
         tb = traceback.extract_tb(exc_tb)[-1]
-        print('An error occurred with ' + p)
+        print('An exception occurred with ' + p)
         print(e)
         print(exc_type, tb[2], tb[1])
-            
-        if os.path.isdir(target + '/' + p):
-            shutil.rmtree(target + '/' + p)
 
+        with open(target + '/pull_pdb_output.log', 'a') as f:
+            f.write('An exception occurred with ' + p + '\n')
+        
+        if os.path.isdir(target + '/' + p):
+            if os.path.isdir(target + '/' + p):
+                shutil.rmtree(target + '/' + p)
         
 
 
@@ -204,7 +206,7 @@ if __name__ == '__main__':
     sample = proteins
     #sample_size = int(sys.argv[2])
 
-    sample = [x.upper() for x in open('../../coronavirus_structural_task_force/pdb/list.txt').read().splitlines()]
+    sample = [x.upper().replace(' ', '') for x in open('../../coronavirus_structural_task_force/pdb/list.txt').read().splitlines()]
 
     #sample = random.sample(proteins, sample_size)
     output_str = 'Name,Nbead\n'
@@ -212,5 +214,5 @@ if __name__ == '__main__':
         f.write(output_str)
             
     for p in sample:
-        pull_and_generate(p)
+        pull_and_generate(p, target)
         
