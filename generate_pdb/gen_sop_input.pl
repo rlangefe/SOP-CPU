@@ -188,7 +188,8 @@ if (defined $printvdw) {
 	    } elsif (&isnucl($resname[$i]) != 0) {
 		$itype = 2;
 	    } else {
-		die "residue/nucleotide type unknown: $resname[$i]";
+		$itype = 1; # SSC: to deal with unknown types
+		# die "residue/nucleotide type unknown: $resname[$i]";
 	    }
 
 	    if (&isprot($resname[$j]) != 0) {
@@ -196,7 +197,8 @@ if (defined $printvdw) {
 	    } elsif (&isnucl($resname[$j]) != 0) {
 		$jtype = 2;
 	    } else {
-		die "residue/nucleotide type unknown: $resname[$j]";
+		$jtype 1; # SSC: to deal with unknown types
+		# die "residue/nucleotide type unknown: $resname[$j]";
 	    }
 
             if ($itype == 2 && $jtype == 2) { # RNA-RNA
@@ -243,7 +245,8 @@ if (defined $printnc) {
 	    } elsif (&isnucl($resname[$i]) != 0) {
 		$itype = 2;
 	    } else {
-		die "residue/nucleotide type unknown: $resname[$i]";
+		$itype = 1; # SSC: to deal with unknown types
+		# die "residue/nucleotide type unknown: $resname[$i]";
 	    }
 
 	    if (&isprot($resname[$j]) != 0) {
@@ -251,7 +254,8 @@ if (defined $printnc) {
 	    } elsif (&isnucl($resname[$j]) != 0) {
 		$jtype = 2;
 	    } else {
-		die "residue/nucleotide type unknown: $resname[$j]";
+		$jtype = 1; # SSC: to deal with unknown types
+		#die "residue/nucleotide type unknown: $resname[$j]";
 	    }
 
 	    # type 1 = protein
@@ -283,7 +287,8 @@ if (defined $printstruct) {
 	} elsif (&isnucl($resname[$i]) != 0) {
 	    $type = 2;
 	} else {
-	    die "residue/nucleotide type unknown: $resname[$i]";
+	    $type = 1; # SSC: to deal with unknown types
+	    # die "residue/nucleotide type unknown: $resname[$i]";
 	}
 
 	# type 1 = protein
