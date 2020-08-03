@@ -197,7 +197,7 @@ if (defined $printvdw) {
 	    } elsif (&isnucl($resname[$j]) != 0) {
 		$jtype = 2;
 	    } else {
-		$jtype 1; # SSC: to deal with unknown types
+		$jtype = 1; # SSC: to deal with unknown types
 		# die "residue/nucleotide type unknown: $resname[$j]";
 	    }
 
