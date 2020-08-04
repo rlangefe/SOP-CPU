@@ -6,6 +6,7 @@ import subprocess
 import re
 import traceback
 import shutil
+import argparse
 
 def create_file_set(p):
     
@@ -13,6 +14,8 @@ def create_file_set(p):
 
     # Get PDB File
     pdb_file = pypdb.get_pdb_file(p)
+
+    pdb_file = modify_pdb(pdb_file)
 
     # Save PDB File
     f = open(target + '/' + p + '/DATA/' + p + '.pdb', 'w')
@@ -71,7 +74,7 @@ def pull_and_generate(p, target):
 
         beads = int(re.search('nbead +(\d+)\n', data).group(1))
 
-        output_str = p + ',' + str(beads) + '\n'
+        output_str = p + ',' + str(beads) + ',' + target + '/' + p + '\n'
 
         with open(target + '/pull_pdb_output.log', 'a') as f:
             f.write(output_str)
@@ -185,34 +188,61 @@ run;
         print(exc_type, tb[2], tb[1])
 
         with open(target + '/pull_pdb_output.log', 'a') as f:
-            f.write('An exception occurred with ' + p + '\n')
+            f.write(p + ',NaN,' + target + '/' + p + '\n')
         
         if os.path.isdir(target + '/' + p):
             if os.path.isdir(target + '/' + p):
                 shutil.rmtree(target + '/' + p)
         
 
+def modify_pdb(pdb_file_contents):
+    match = re.search('REMARK \d+?  BEST REPRESENTATIVE CONFORMER IN THIS ENSEMBLE\s*?:\s*?(\d+)', pdb_file_contents)
+    if not match == None:
+        best_model = int(match.group(1))
+        
+        match_str = '(MODEL\s+' + str(best_model) + '\s+\n(ATOM\s+\d+\s+\w+\s+\w+\s+\w+\s+\d+\s+-?\d+\.\d+\s+-?\d+\.\d+\s+-?\d+\.\d+\s+-?\d+\.\d+\s+\d+\.\d+\s+\w+\s+\n)+TER\s+\d+\s+\w+\s+\w+\s+\d+\s+\nENDMDL)'
+        match = re.search(match_str, pdb_file_contents)
+        model = match.group(1)
+
+        match_str = '(HEADER(.+\n)+)MODEL\s+1'
+        match = re.search(match_str, pdb_file_contents)
+        header = match.group(1)
+
+        full_output = header + '\n' + model
+        return full_output
+    else:
+        return pdb_file_contents
 
 
 if __name__ == '__main__':
-    target = sys.argv[1]
-
     random.seed(42)
+
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument("-d", "--directory", dest="directory", help="Directory of folders")
+    parser.add_argument("-i", "--input", dest="input", help="File containing PDBIDs to pull")
+    parser.add_argument("-r", "--restart", dest="restart", default=0, help="Restart position", type=int)
+
+    args = parser.parse_args()
+
+    target = args.directory
 
     # proteins = pypdb.get_all()
 
     #proteins = pypdb.Query('covid').search()
-    proteins = pypdb.Query('6y2g').search()
+    proteins = pypdb.Query('2MM4').search()
     sample = proteins
     #sample_size = int(sys.argv[2])
 
-    sample = [x.upper().replace(' ', '') for x in open('../../coronavirus_structural_task_force/pdb/list.txt').read().splitlines()]
+    sample = [x.upper().replace(' ', '') for x in open(args.input).read().splitlines()]
 
     #sample = random.sample(proteins, sample_size)
-    output_str = 'Name,Nbead\n'
-    with open(target + '/pull_pdb_output.log', 'w+') as f:
-        f.write(output_str)
+    output_str = 'Name,Nbead,Directory\n'
+
+    if args.restart == 0:
+        with open(target + '/pull_pdb_output.log', 'w+') as f:
+            f.write(output_str)
             
-    for p in sample:
+    for p in sample[args.restart:]:
         pull_and_generate(p, target)
         
