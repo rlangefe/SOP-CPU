@@ -23,31 +23,30 @@ def create_file_set(p):
     print('\tWriting ' + p + ' PDB File')
     f.close()
 
+    contents = subprocess.check_output('perl gen_sop_input.pl -i ' + target + '/' + p + '/DATA/' + p + '.pdb -b -a -v -x', shell=True, stderr=subprocess.STDOUT).decode('utf-8')
+    match = re.search('(nbnd \d+\n(?:\d+ \d+ -?\d+\.\d+\n)+)(nangle \d+\n(?:\d+ \d+ \d+ -?\d+\.\d+\n)+)(natt \d+ nrep \d+ epsilon_h -?\d+\.\d+ epsilon_l -?\d+\.\d+ sigma -?\d+\.\d+ rcut_rna -?\d+\.\d+ rcut_prot -?\d+\.\d+\n(?:\d+ \d+ -?\d+\.\d+ \d+ \d+\n)+)(nbead \d+\n(?:\d+ -?\d+\.\d+ -?\d+\.\d+ -?\d+\.\d+ \d+\n)+)', contents)
+
     # Calculate and Save Bonds File
     f = open(target + '/' + p + '/DATA/' + p + '_bonds.dat', 'w+')
-    contents = subprocess.check_output('perl gen_sop_input.pl -i ' + target + '/' + p + '/DATA/' + p + '.pdb -b', shell=True, stderr=subprocess.STDOUT).decode('utf-8')
-    f.write(contents)
+    f.write(match.group(1))
     print('\tWriting ' + p + ' Bonds File')
     f.close()
 
     # Calculate and Save Angles File
     f = open(target + '/' + p + '/DATA/' + p + '_angles.dat', 'w+')
-    contents = subprocess.check_output('perl gen_sop_input.pl -i ' + target + '/' + p + '/DATA/' + p + '.pdb -a', shell=True, stderr=subprocess.STDOUT).decode('utf-8')
-    f.write(contents)
+    f.write(match.group(2))
     print('\tWriting ' + p + ' Angles File')
     f.close()
 
     # Calculate and Save VDW File
     f = open(target + '/' + p + '/DATA/' + p + '_vdw.dat', 'w+')
-    contents = subprocess.check_output('perl gen_sop_input.pl -i ' + target + '/' + p + '/DATA/' + p + '.pdb -v', shell=True, stderr=subprocess.STDOUT).decode('utf-8')
-    f.write(contents)
+    f.write(match.group(3))
     print('\tWriting ' + p + ' VDW File')
     f.close()
 
     # Calculate and Save Init File
     f = open(target + '/' + p + '/DATA/' + p + '_init.xyz', 'w+')
-    contents = subprocess.check_output('perl gen_sop_input.pl -i ' + target + '/' + p + '/DATA/' + p + '.pdb -x', shell=True, stderr=subprocess.STDOUT).decode('utf-8')
-    f.write(contents)
+    f.write(match.group(4))
     print('\tWriting ' + p + ' Init File')
     f.close()
 
