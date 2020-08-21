@@ -1,4 +1,10 @@
-CC = nvcc -O3 -arch=sm_60 -lineinfo
+CC = nvcc -O3 -arch=sm_60 \
+-gencode=arch=compute_60,code=sm_60 \
+-gencode=arch=compute_61,code=sm_61 \
+-gencode=arch=compute_70,code=sm_70 \
+-gencode=arch=compute_75,code=sm_75 \
+-gencode=arch=compute_75,code=compute_75 \
+-lineinfo
 
 EFILE = ./sop.x
 OBJS = ./sop.o ./utils.o ./random_generator.o ./global.o ./energy.o ./io.o ./params.o ./neighbor_list.o ./cell_list.o ./pair_list.o ./GPUvars.o
