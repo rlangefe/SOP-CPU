@@ -679,26 +679,26 @@ __global__ void rand_kernel(int N, float3 *dev_force, curandState *dev_state, fl
     float fac,rsq,v1,v2;
 
     do{
-      v1=2.0*(float)curand_normal_float(&localState)-1.0;
-      v2=2.0*(float)curand_normal_float(&localState)-1.0;
+      v1=2.0*(float)curand_normal(&localState)-1.0;
+      v2=2.0*(float)curand_normal(&localState)-1.0;
       rsq=v1*v1+v2*v2;
     } while( rsq>=1.0||rsq==0.0 );
     fac=sqrt( -2.0*log(rsq)/rsq );
     
     dev_force[i].x +=   (float)(v2 * fac * var);
-
+    /*
     do{
-      v1=2.0*(float)curand_normal_float(&localState)-1.0;
-      v2=2.0*(float)curand_normal_float(&localState)-1.0;
+      v1=2.0*(float)curand_normal(&localState)-1.0;
+      v2=2.0*(float)curand_normal(&localState)-1.0;
       rsq=v1*v1+v2*v2;
     } while( rsq>=1.0||rsq==0.0 );
     fac=sqrt( -2.0*log(rsq)/rsq );
-
-    dev_force[i].y +=  (float)(v2 * fac * var);
+    */
+    dev_force[i].y +=  (float)(v1 * fac * var);
 
     do{
-      v1=2.0*(float)curand_normal_float(&localState)-1.0;
-      v2=2.0*(float)curand_normal_float(&localState)-1.0;
+      v1=2.0*(float)curand_normal(&localState)-1.0;
+      v2=2.0*(float)curand_normal(&localState)-1.0;
       rsq=v1*v1+v2*v2;
     } while( rsq>=1.0||rsq==0.0 );
     fac=sqrt( -2.0*log(rsq)/rsq );
