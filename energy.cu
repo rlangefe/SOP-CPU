@@ -46,37 +46,37 @@ inline void __cudaCheckError( const char *file, const int line )
     return;
 }
 
-__device__ __constant__ double dev_coeff_att[3][3] = {
+__device__ __constant__ float dev_coeff_att[3][3] = {
     {0.0, 0.0, 0.0},
 	{0.0, 0.7, 0.8},
 	{0.0, 0.8, 1.0}
 };
 
-__device__ __constant__ double dev_coeff_rep[3][3] = {
+__device__ __constant__ float dev_coeff_rep[3][3] = {
     {0.0, 0.0, 0.0},
 	{0.0, 1.0, 1.0},
 	{0.0, 1.0, 1.0}
 };
 
-__device__ __constant__ double dev_force_coeff_att[3][3] = {
+__device__ __constant__ float dev_force_coeff_att[3][3] = {
     {0.0,       0.0,       0.0},
 	{0.0, -12.0*1.0, -12.0*0.8},
 	{0.0, -12.0*0.8, -12.0*0.7}
 };
 
-__device__ __constant__ double dev_force_coeff_rep[3][3] = {
+__device__ __constant__ float dev_force_coeff_rep[3][3] = {
     {0.0,       0.0,       0.0},
 	{0.0,  -6.0*1.0,  -6.0*1.0},
 	{0.0,  -6.0*1.0,  -6.0*1.0}
 };
 
-__device__ __constant__ double dev_sigma_rep[3][3] = {
+__device__ __constant__ float dev_sigma_rep[3][3] = {
     {0.0, 0.0, 0.0},
 	{0.0, 3.8, 5.4},
 	{0.0, 5.4, 7.0}
 };
 
-__device__ __constant__ double dev_rcut_nat[3][3] = {
+__device__ __constant__ float dev_rcut_nat[3][3] = {
     { 0.0,  0.0,  0.0},
     { 0.0,  8.0, 11.0},
     { 0.0, 11.0, 14.0}
@@ -126,7 +126,7 @@ void clear_forces() {
     force[i].z = 0.0;
   }
   clock_t ck1 = clock()-ck0;
-  clear_forces_time+= ((double)ck1)/CLOCKS_PER_SEC;
+  clear_forces_time+= ((float)ck1)/CLOCKS_PER_SEC;
 }
 
 void set_potential() {
@@ -233,7 +233,7 @@ void fene_energy()
   device_to_host(3);
 
   int ibead, jbead;
-  double dx, dy, dz, d,dev;
+  float dx, dy, dz, d,dev;
   char line[2048];
 
   e_bnd = 0.0;
@@ -262,7 +262,7 @@ void fene_energy()
   e_bnd *= -e_bnd_coeff;
   clock_t ck1 = clock()-ck0;
 
-  fene_energy_time+= ((double)ck1)/CLOCKS_PER_SEC;
+  fene_energy_time+= ((float)ck1)/CLOCKS_PER_SEC;
   return;
 
 }
@@ -277,7 +277,7 @@ void soft_sphere_angular_energy()
   e_ang_ss = 0.0;
   int ibead, kbead;
   coord r_ik;
-  double d,d6;
+  float d,d6;
 
   for( int i=1; i<=nang; i++ ) {
 
@@ -300,7 +300,7 @@ void soft_sphere_angular_energy()
     e_ang_ss += e_ang_ss_coeff/d6;
   }
   clock_t ck1 = clock()-ck0;
-  ss_ang_energy_time+= ((double)ck1)/CLOCKS_PER_SEC;
+  ss_ang_energy_time+= ((float)ck1)/CLOCKS_PER_SEC;
 
   return;
 
@@ -315,7 +315,7 @@ void vdw_energy()
 
   int ibead,jbead;
   int itype,jtype;
-  double dx,dy,dz,d,d2,d6,d12;
+  float dx,dy,dz,d,d2,d6,d12;
   char line[2048];
 
   e_vdw_rr = 0.0;
@@ -375,7 +375,7 @@ void vdw_energy()
   e_vdw_rr = e_vdw_rr_att + e_vdw_rr_rep;
   clock_t ck1 = clock()-ck0;
 
-  vdw_energy_time+= ((double)ck1)/CLOCKS_PER_SEC;
+  vdw_energy_time+= ((float)ck1)/CLOCKS_PER_SEC;
 
   return;
 
@@ -392,11 +392,11 @@ void vdw_forces()
 
   int ibead,jbead;
   int itype,jtype;
-  double dx,dy,dz,d,d2,d6,d12;
-  double fx,fy,fz;
-  double co1;
-  const static double tol = 1.0e-7;
-  double rep_tol;
+  float dx,dy,dz,d,d2,d6,d12;
+  float fx,fy,fz;
+  float co1;
+  const static float tol = 1.0e-7;
+  float rep_tol;
 
   for( int i=1; i<=nil_att; i++ ) {
 
@@ -477,7 +477,7 @@ void vdw_forces()
 
   }
   clock_t ck1 = clock()-ck0;
-  vdw_forces_time+= ((double)ck1)/CLOCKS_PER_SEC;
+  vdw_forces_time+= ((float)ck1)/CLOCKS_PER_SEC;
 }
 
 void soft_sphere_angular_forces()
@@ -486,9 +486,9 @@ void soft_sphere_angular_forces()
   char line[2048];
 
   int ibead,kbead;
-  double dx,dy,dz,d,d8;
-  double fx,fy,fz;
-  double co1;
+  float dx,dy,dz,d,d8;
+  float fx,fy,fz;
+  float co1;
 
   for( int i=1; i<=nang; i++ ) {
 
@@ -524,7 +524,7 @@ void soft_sphere_angular_forces()
 
   }
   clock_t ck1 = clock()-ck0;
-  ss_ang_forces_time+= ((double)ck1)/CLOCKS_PER_SEC;
+  ss_ang_forces_time+= ((float)ck1)/CLOCKS_PER_SEC;
 
 }
 
@@ -534,9 +534,9 @@ void fene_forces()
   using namespace std;
 
   int ibead, jbead;
-  double dx, dy, dz, d, dev, dev2;
-  double fx, fy, fz;
-  double temp;
+  float dx, dy, dz, d, dev, dev2;
+  float fx, fy, fz;
+  float temp;
 
   char line[2048];
 
@@ -572,7 +572,7 @@ void fene_forces()
 
   }
   clock_t ck1 = clock()-ck0;
-  fene_forces_time+= ((double)ck1)/CLOCKS_PER_SEC;
+  fene_forces_time+= ((float)ck1)/CLOCKS_PER_SEC;
 }
 
 void random_force() {
@@ -581,7 +581,7 @@ void random_force() {
 
   device_to_host(8);
 
-  double var;
+  float var;
   int problem;
 
   var = sqrt(2.0*T*zeta/h);
@@ -593,7 +593,7 @@ void random_force() {
 
   }
   clock_t ck1 = clock()-ck0;
-  rng_time+= ((double)ck1)/CLOCKS_PER_SEC;
+  rng_time+= ((float)ck1)/CLOCKS_PER_SEC;
 }
 
 /**********************
@@ -617,10 +617,10 @@ void clear_forces_gpu() {
 
   CudaCheckError();
   clock_t ck1 = clock()-ck0;
-  clear_forces_time+= ((double)ck1)/CLOCKS_PER_SEC;
+  clear_forces_time+= ((float)ck1)/CLOCKS_PER_SEC;
 }
 
-__global__ void clear_forces_kernel(double3 *dev_force, int N){
+__global__ void clear_forces_kernel(float3 *dev_force, int N){
   int i = blockIdx.x * blockDim.x + threadIdx.x;
 	if(i > 0 && i < N){
     dev_force[i].x = 0.0;
@@ -639,7 +639,7 @@ void random_force_gpu(){
 
   host_to_device(8);
 
-  double var = sqrt(2.0*T*zeta/h);
+  float var = sqrt(2.0*T*zeta/h);
 
   int N = nbead+1;
 
@@ -651,11 +651,11 @@ void random_force_gpu(){
  
   CudaCheckError();
   clock_t ck1 = clock()-ck0;
-  rng_time+= ((double)ck1)/CLOCKS_PER_SEC;
+  rng_time+= ((float)ck1)/CLOCKS_PER_SEC;
 }
 
 /*
-__global__ void rand_kernel(int N, double3 *dev_force, curandState *dev_state, double var){
+__global__ void rand_kernel(int N, float3 *dev_force, curandState *dev_state, float var){
   unsigned int i = blockIdx.x*blockDim.x+threadIdx.x;
   if(i > 0 && i < N){
     // Copy state to local memory for efficiency
@@ -670,41 +670,41 @@ __global__ void rand_kernel(int N, double3 *dev_force, curandState *dev_state, d
   }
 }*/
 
-__global__ void rand_kernel(int N, double3 *dev_force, curandState *dev_state, double var){
+__global__ void rand_kernel(int N, float3 *dev_force, curandState *dev_state, float var){
   unsigned int i = blockIdx.x*blockDim.x+threadIdx.x;
   if(i > 0 && i < N){
     // Copy state to local memory for efficiency
     curandState localState = dev_state[i];
 
-    double fac,rsq,v1,v2;
+    float fac,rsq,v1,v2;
 
     do{
-      v1=2.0*(double)curand_normal_double(&localState)-1.0;
-      v2=2.0*(double)curand_normal_double(&localState)-1.0;
+      v1=2.0*(float)curand_normal_float(&localState)-1.0;
+      v2=2.0*(float)curand_normal_float(&localState)-1.0;
       rsq=v1*v1+v2*v2;
     } while( rsq>=1.0||rsq==0.0 );
     fac=sqrt( -2.0*log(rsq)/rsq );
     
-    dev_force[i].x +=   (double)(v2 * fac * var);
+    dev_force[i].x +=   (float)(v2 * fac * var);
 
     do{
-      v1=2.0*(double)curand_normal_double(&localState)-1.0;
-      v2=2.0*(double)curand_normal_double(&localState)-1.0;
+      v1=2.0*(float)curand_normal_float(&localState)-1.0;
+      v2=2.0*(float)curand_normal_float(&localState)-1.0;
       rsq=v1*v1+v2*v2;
     } while( rsq>=1.0||rsq==0.0 );
     fac=sqrt( -2.0*log(rsq)/rsq );
 
-    dev_force[i].y +=  (double)(v2 * fac * var);
+    dev_force[i].y +=  (float)(v2 * fac * var);
 
     do{
-      v1=2.0*(double)curand_normal_double(&localState)-1.0;
-      v2=2.0*(double)curand_normal_double(&localState)-1.0;
+      v1=2.0*(float)curand_normal_float(&localState)-1.0;
+      v2=2.0*(float)curand_normal_float(&localState)-1.0;
       rsq=v1*v1+v2*v2;
     } while( rsq>=1.0||rsq==0.0 );
     fac=sqrt( -2.0*log(rsq)/rsq );
     
 
-    dev_force[i].z +=  (double)(v2 * fac * var);
+    dev_force[i].z +=  (float)(v2 * fac * var);
     
     // Copy state back to global memory
     dev_state[i] = localState;
@@ -730,7 +730,7 @@ void vdw_energy_gpu(){
   e_vdw_rr = e_vdw_rr_att + e_vdw_rr_rep;
 
   clock_t ck1 = clock()-ck0;
-  vdw_energy_time+= ((double)ck1)/CLOCKS_PER_SEC;
+  vdw_energy_time+= ((float)ck1)/CLOCKS_PER_SEC;
 
   return;
 }
@@ -744,24 +744,24 @@ void vdw_energy_att_gpu(){
   int blocks = (int)ceil(1.0*N/SECTION_SIZE);
 	
 	vdw_energy_att_value_kernel<<<blocks, threads>>>(dev_ibead_pair_list_att, dev_jbead_pair_list_att, dev_itype_pair_list_att, dev_jtype_pair_list_att, 
-														dev_pl_lj_nat_pdb_dist6, dev_pl_lj_nat_pdb_dist12, dev_unc_pos, N, boxl, dev_value_double);
+														dev_pl_lj_nat_pdb_dist6, dev_pl_lj_nat_pdb_dist12, dev_unc_pos, N, boxl, dev_value_float);
 
   CudaCheckError();
 	
-	hier_ks_scan(dev_value_double, dev_value_double, N, 0);
+	hier_ks_scan(dev_value_float, dev_value_float, N, 0);
 	
-	cudaCheck(cudaMemcpy(&e_vdw_rr_att, &dev_value_double[N-1], sizeof(double), cudaMemcpyDeviceToHost));
+	cudaCheck(cudaMemcpy(&e_vdw_rr_att, &dev_value_float[N-1], sizeof(float), cudaMemcpyDeviceToHost));
 
   CudaCheckError();
 }
 
 __global__ void vdw_energy_att_value_kernel(int *dev_ibead_pair_list_att, int *dev_jbead_pair_list_att, int *dev_itype_pair_list_att, int *dev_jtype_pair_list_att, 
-											double *dev_pl_lj_nat_pdb_dist6, double *dev_pl_lj_nat_pdb_dist12, double3 *dev_unc_pos, int N, double boxl, double *dev_result){
+											float *dev_pl_lj_nat_pdb_dist6, float *dev_pl_lj_nat_pdb_dist12, float3 *dev_unc_pos, int N, float boxl, float *dev_result){
 	int i = blockIdx.x * blockDim.x + threadIdx.x;
 	if(i > 0 && i < N){
 		int ibead,jbead;
 		int itype,jtype;
-		double dx,dy,dz,d,d2,d6,d12;
+		float dx,dy,dz,d,d2,d6,d12;
 		
 		ibead = dev_ibead_pair_list_att[i];
 		jbead = dev_jbead_pair_list_att[i];
@@ -776,7 +776,7 @@ __global__ void vdw_energy_att_value_kernel(int *dev_ibead_pair_list_att, int *d
 
 		// apply periodic boundary conditions to dx, dy, and dz
 		//dx -= boxl*rnd(dx/boxl);
-		double rnd_value;
+		float rnd_value;
 
 		rnd_value = ( ((dx/boxl)>0) ? std::floor((dx/boxl)+0.5) : std::ceil((dx/boxl)-0.5) );
 		dx -= boxl*rnd_value;
@@ -805,31 +805,31 @@ void vdw_energy_rep_gpu(){
 	int N = nil_rep+1;
 	
 	int size_int = N*sizeof(int);
-	int size_double = N*sizeof(double);
-	int size_double3 = (nbead + 1)*sizeof(double3);
+	int size_float = N*sizeof(float);
+	int size_float3 = (nbead + 1)*sizeof(float3);
 	
 	int threads = (int)min(N, SECTION_SIZE);
   int blocks = (int)ceil(1.0*N/SECTION_SIZE);
 	
 	vdw_energy_rep_value_kernel<<<blocks, threads>>>(dev_ibead_pair_list_rep, dev_jbead_pair_list_rep, dev_itype_pair_list_rep, dev_jtype_pair_list_rep, 
-													                        dev_unc_pos, N, boxl, dev_value_double);
+													                        dev_unc_pos, N, boxl, dev_value_float);
 
   CudaCheckError();
 	
-	hier_ks_scan(dev_value_double, dev_value_double, N, 0);
+	hier_ks_scan(dev_value_float, dev_value_float, N, 0);
 
-	cudaCheck(cudaMemcpy(&e_vdw_rr_rep, &dev_value_double[N-1], sizeof(double), cudaMemcpyDeviceToHost));
+	cudaCheck(cudaMemcpy(&e_vdw_rr_rep, &dev_value_float[N-1], sizeof(float), cudaMemcpyDeviceToHost));
 
   CudaCheckError();
 }
 
 __global__ void vdw_energy_rep_value_kernel(int *dev_ibead_pair_list_rep, int *dev_jbead_pair_list_rep, int *dev_itype_pair_list_rep, int *dev_jtype_pair_list_rep, 
-											double3 *dev_unc_pos, int N, double boxl, double *dev_result){
+											float3 *dev_unc_pos, int N, float boxl, float *dev_result){
 	int i = blockIdx.x * blockDim.x + threadIdx.x;
 	if(i > 0 && i < N){
 		int ibead,jbead;
 		int itype,jtype;
-		double dx,dy,dz,d,d2,d6,d12;
+		float dx,dy,dz,d,d2,d6,d12;
 		
 		ibead = dev_ibead_pair_list_rep[i];
 		jbead = dev_jbead_pair_list_rep[i];
@@ -844,7 +844,7 @@ __global__ void vdw_energy_rep_value_kernel(int *dev_ibead_pair_list_rep, int *d
 
 		// apply periodic boundary conditions to dx, dy, and dz
 		//dx -= boxl*rnd(dx/boxl);
-		double rnd_value;
+		float rnd_value;
 
 		rnd_value = ( ((dx/boxl)>0) ? std::floor((dx/boxl)+0.5) : std::ceil((dx/boxl)-0.5) );
 		dx -= boxl*rnd_value;
@@ -861,10 +861,10 @@ __global__ void vdw_energy_rep_value_kernel(int *dev_ibead_pair_list_rep, int *d
 		d6 = d2*d2*d2;
 		d12 = d6*d6;
 
-    double s = dev_sigma_rep[itype][jtype];
-    double s2 = s*s;
-    double s6 = s2*s2*s2;
-    double s12 = s6*s6;
+    float s = dev_sigma_rep[itype][jtype];
+    float s2 = s*s;
+    float s6 = s2*s2*s2;
+    float s12 = s6*s6;
 		
     dev_result[i] = dev_coeff_rep[itype][jtype] * (s12/d12 + s6/d6);
 	}else if(i == 0){
@@ -872,7 +872,7 @@ __global__ void vdw_energy_rep_value_kernel(int *dev_ibead_pair_list_rep, int *d
 	}
 }
 
-void hier_ks_scan(double *dev_X, double *dev_Y, int N, int re){
+void hier_ks_scan(float *dev_X, float *dev_Y, int N, int re){
     if(N <= SECTION_SIZE){
         ksScanInc<<<1, N>>>(dev_X, dev_Y, N);
 
@@ -885,8 +885,8 @@ void hier_ks_scan(double *dev_X, double *dev_Y, int N, int re){
         int threads = (int)min(N, SECTION_SIZE);
         int blocks = (int)ceil(1.0*N/SECTION_SIZE);
 
-        double *dev_S;
-        cudaCheck(cudaMalloc((void**)&dev_S, (int)ceil(1.0*N/SECTION_SIZE) * sizeof(double)));
+        float *dev_S;
+        cudaCheck(cudaMalloc((void**)&dev_S, (int)ceil(1.0*N/SECTION_SIZE) * sizeof(float)));
         
         ksScanAuxInc<<<blocks, threads>>>(dev_X, dev_Y, N, dev_S);
         cudaDeviceSynchronize();
@@ -905,10 +905,10 @@ void hier_ks_scan(double *dev_X, double *dev_Y, int N, int re){
     }
 }
 
-__global__ void ksScanAuxExc (double *X, double *Y, int InputSize, double *S) {
-    double val;
+__global__ void ksScanAuxExc (float *X, float *Y, int InputSize, float *S) {
+    float val;
     
-    __shared__ double XY[SECTION_SIZE];
+    __shared__ float XY[SECTION_SIZE];
     int i = blockIdx.x * blockDim.x + threadIdx.x;
     if(i < InputSize && threadIdx.x != 0){
         XY[threadIdx.x] = X[i-1];
@@ -938,10 +938,10 @@ __global__ void ksScanAuxExc (double *X, double *Y, int InputSize, double *S) {
     }
 }
 
-__global__ void ksScanAuxInc (double *X, double *Y, int InputSize, double *S) {
-    double val;
+__global__ void ksScanAuxInc (float *X, float *Y, int InputSize, float *S) {
+    float val;
     
-    __shared__ double XY[SECTION_SIZE];
+    __shared__ float XY[SECTION_SIZE];
     int i = blockIdx.x * blockDim.x + threadIdx.x;
     if(i < InputSize){
         XY[threadIdx.x] = X[i];
@@ -969,10 +969,10 @@ __global__ void ksScanAuxInc (double *X, double *Y, int InputSize, double *S) {
     }
 }
 
-__global__ void ksScanExc (double *X, double *Y, double InputSize) {
-    double val;
+__global__ void ksScanExc (float *X, float *Y, float InputSize) {
+    float val;
     
-    __shared__ double XY[SECTION_SIZE];
+    __shared__ float XY[SECTION_SIZE];
     int i = blockIdx.x * blockDim.x + threadIdx.x;
     
     if(i < InputSize && threadIdx.x != 0){
@@ -998,10 +998,10 @@ __global__ void ksScanExc (double *X, double *Y, double InputSize) {
     }
 }
 
-__global__ void ksScanInc (double *X, double *Y, int InputSize) {
-    double val;
+__global__ void ksScanInc (float *X, float *Y, int InputSize) {
+    float val;
     
-    __shared__ double XY[SECTION_SIZE];
+    __shared__ float XY[SECTION_SIZE];
     int i = blockIdx.x * blockDim.x + threadIdx.x;
     
     if(i < InputSize){
@@ -1025,7 +1025,7 @@ __global__ void ksScanInc (double *X, double *Y, int InputSize) {
     }
 }
 
-__global__ void sumIt (double *Y, double *S, int InputSize) {
+__global__ void sumIt (float *Y, float *S, int InputSize) {
     if(blockIdx.x > 0){
         int i = blockIdx.x * blockDim.x + threadIdx.x;
         if(i < InputSize){
@@ -1049,15 +1049,15 @@ void vdw_forces_gpu()
 
   CudaCheckError();
   clock_t ck1 = clock()-ck0;
-  vdw_forces_time+= ((double)ck1)/CLOCKS_PER_SEC;
+  vdw_forces_time+= ((float)ck1)/CLOCKS_PER_SEC;
 }
 
 void vdw_forces_att_gpu(){	
 	int N = nil_att + 1;
 	
 	int size_int = N*sizeof(int);
-	int size_double = N*sizeof(double);
-	int size_double3 = (nbead+1)*sizeof(double3);
+	int size_float = N*sizeof(float);
+	int size_float3 = (nbead+1)*sizeof(float3);
 	
 	int threads = (int)min(N, SECTION_SIZE);
 	int blocks = (int)ceil(1.0*N/SECTION_SIZE);
@@ -1069,17 +1069,17 @@ void vdw_forces_att_gpu(){
 }
 
 __global__ void vdw_forces_att_kernel(int *dev_ibead_pair_list_att, int *dev_jbead_pair_list_att, int *dev_itype_pair_list_att, int *dev_jtype_pair_list_att, 
-								double *dev_pl_lj_nat_pdb_dist, double boxl, int N, double3 *dev_unc_pos, double3 *dev_force){
+								float *dev_pl_lj_nat_pdb_dist, float boxl, int N, float3 *dev_unc_pos, float3 *dev_force){
 									
 	int i = blockIdx.x * blockDim.x + threadIdx.x;
 	
 	if(i > 0 && i < N){
 		int ibead,jbead;
 		int itype,jtype;
-		double dx,dy,dz,d,d2,d6,d12;
-		double fx,fy,fz;
-		double co1;
-		const static double tol = 1.0e-7;
+		float dx,dy,dz,d,d2,d6,d12;
+		float fx,fy,fz;
+		float co1;
+		const static float tol = 1.0e-7;
 
 		ibead = dev_ibead_pair_list_att[i];
 		jbead = dev_jbead_pair_list_att[i];
@@ -1092,7 +1092,7 @@ __global__ void vdw_forces_att_kernel(int *dev_ibead_pair_list_att, int *dev_jbe
 
 		// apply periodic boundary conditions to dx, dy, and dz
 		//dx -= boxl*rnd(dx/boxl);
-		double rnd_value;
+		float rnd_value;
 
 		rnd_value = ( ((dx/boxl)>0) ? std::floor((dx/boxl)+0.5) : std::ceil((dx/boxl)-0.5) );
 		dx -= boxl*rnd_value;
@@ -1108,15 +1108,15 @@ __global__ void vdw_forces_att_kernel(int *dev_ibead_pair_list_att, int *dev_jbe
 		// compute square of distance between ibead and jbead
 		d2 = dx*dx+dy*dy+dz*dz;
 		
-		double pl_dist2 = dev_pl_lj_nat_pdb_dist[i] * dev_pl_lj_nat_pdb_dist[i];
+		float pl_dist2 = dev_pl_lj_nat_pdb_dist[i] * dev_pl_lj_nat_pdb_dist[i];
 		
 		if( d2 < tol*pl_dist2 ) return;
 		d6 = d2*d2*d2;
 		d12 = d6*d6;
 
-		double pl_dist6 = pl_dist2 * pl_dist2 * pl_dist2;
+		float pl_dist6 = pl_dist2 * pl_dist2 * pl_dist2;
 
-		double pl_dist12 = pl_dist6 * pl_dist6;
+		float pl_dist12 = pl_dist6 * pl_dist6;
 
 		co1 = dev_force_coeff_att[itype][jtype]/d2*((pl_dist12/d12)-(pl_dist6/d6));
 
@@ -1148,7 +1148,7 @@ void vdw_forces_rep_gpu(){
 	int N = nil_rep + 1;
 	
 	int size_int = N*sizeof(int);
-	int size_double3 = (nbead+1)*sizeof(double3);
+	int size_float3 = (nbead+1)*sizeof(float3);
 	
 	int threads = (int)min(N, SECTION_SIZE);
 	int blocks = (int)ceil(1.0*N/SECTION_SIZE);
@@ -1158,19 +1158,19 @@ void vdw_forces_rep_gpu(){
   CudaCheckError();
 }
 
-__global__ void vdw_forces_rep_kernel(int *dev_ibead_pair_list_rep, int *dev_jbead_pair_list_rep, int *dev_itype_pair_list_rep, int *dev_jtype_pair_list_rep, double boxl, int N,
-								double3 *dev_unc_pos, double3 *dev_force){
+__global__ void vdw_forces_rep_kernel(int *dev_ibead_pair_list_rep, int *dev_jbead_pair_list_rep, int *dev_itype_pair_list_rep, int *dev_jtype_pair_list_rep, float boxl, int N,
+								float3 *dev_unc_pos, float3 *dev_force){
 									
 	int i = blockIdx.x * blockDim.x + threadIdx.x;
 
 	if(i > 0 && i < N) {
 		int ibead,jbead;
 		int itype,jtype;
-		double dx,dy,dz,d,d2,d6,d12;
-		double fx,fy,fz;
-		double co1;
-		const static double tol = 1.0e-7;
-		double rep_tol;
+		float dx,dy,dz,d,d2,d6,d12;
+		float fx,fy,fz;
+		float co1;
+		const static float tol = 1.0e-7;
+		float rep_tol;
 
 		ibead = dev_ibead_pair_list_rep[i];
 		jbead = dev_jbead_pair_list_rep[i];
@@ -1183,7 +1183,7 @@ __global__ void vdw_forces_rep_kernel(int *dev_ibead_pair_list_rep, int *dev_jbe
 
 		// apply periodic boundary conditions to dx, dy, and dz
 		//dx -= boxl*rnd(dx/boxl);
-		double rnd_value;
+		float rnd_value;
 
 		rnd_value = ( ((dx/boxl)>0) ? std::floor((dx/boxl)+0.5) : std::ceil((dx/boxl)-0.5) );
 		dx -= boxl*rnd_value;
@@ -1199,7 +1199,7 @@ __global__ void vdw_forces_rep_kernel(int *dev_ibead_pair_list_rep, int *dev_jbe
 		// compute square of distance between ibead and jbead
 		d2 = dx*dx+dy*dy+dz*dz;
 
-		double s2 = dev_sigma_rep[itype][jtype] * dev_sigma_rep[itype][jtype];
+		float s2 = dev_sigma_rep[itype][jtype] * dev_sigma_rep[itype][jtype];
 			
 		rep_tol = s2*tol;
 
@@ -1207,8 +1207,8 @@ __global__ void vdw_forces_rep_kernel(int *dev_ibead_pair_list_rep, int *dev_jbe
 		d6 = d2*d2*d2;
 		d12 = d6*d6;
 
-		double s6 = s2*s2*s2;
-		double s12 = s6*s6;
+		float s6 = s2*s2*s2;
+		float s12 = s6*s6;
 
 		co1 = dev_force_coeff_rep[itype][jtype]/d2 * (2.0*s12/d12+s6/d6);
 
@@ -1243,37 +1243,37 @@ void fene_energy_gpu(){
 
 	int N = nbnd+1;
 	int size_int = N*sizeof(int);
-	int size_double3 = (nbead+1)*sizeof(double3);
-	int size_double = N*sizeof(double);
+	int size_float3 = (nbead+1)*sizeof(float3);
+	int size_float = N*sizeof(float);
 	
 	e_bnd = 0.0;
 	
 	int threads = (int)min(N, SECTION_SIZE);
   int blocks = (int)ceil(1.0*N/SECTION_SIZE);
 	
-	fene_energy_gpu_kernel<<<blocks, threads>>>(dev_ibead_bnd, dev_jbead_bnd, dev_unc_pos, dev_pdb_dist, boxl, N, R0sq, dev_value_double);
+	fene_energy_gpu_kernel<<<blocks, threads>>>(dev_ibead_bnd, dev_jbead_bnd, dev_unc_pos, dev_pdb_dist, boxl, N, R0sq, dev_value_float);
 
   CudaCheckError();
 	
-	hier_ks_scan(dev_value_double, dev_value_double, N, 0);
+	hier_ks_scan(dev_value_float, dev_value_float, N, 0);
 	
-	cudaMemcpy(&e_bnd, &dev_value_double[N-1], sizeof(double), cudaMemcpyDeviceToHost);
+	cudaMemcpy(&e_bnd, &dev_value_float[N-1], sizeof(float), cudaMemcpyDeviceToHost);
 
   CudaCheckError();
 	
 	e_bnd *= -e_bnd_coeff;
 
   clock_t ck1 = clock()-ck0;
-  fene_energy_time+= ((double)ck1)/CLOCKS_PER_SEC;
+  fene_energy_time+= ((float)ck1)/CLOCKS_PER_SEC;
 
 	return;
 }
 
-__global__ void fene_energy_gpu_kernel(int *dev_ibead_bnd, int *dev_jbead_bnd, double3 *dev_unc_pos, double *dev_pdb_dist, int boxl, int N, double dev_R0sq, double *dev_result){
+__global__ void fene_energy_gpu_kernel(int *dev_ibead_bnd, int *dev_jbead_bnd, float3 *dev_unc_pos, float *dev_pdb_dist, int boxl, int N, float dev_R0sq, float *dev_result){
 	int i = blockIdx.x * blockDim.x + threadIdx.x;
 	if(i > 0 && i < N){
 		int ibead, jbead;
-		double dx, dy, dz, d,dev;
+		float dx, dy, dz, d,dev;
 		
 		ibead = dev_ibead_bnd[i];
 		jbead = dev_jbead_bnd[i];
@@ -1286,7 +1286,7 @@ __global__ void fene_energy_gpu_kernel(int *dev_ibead_bnd, int *dev_jbead_bnd, d
 
 		// apply periodic boundary conditions to dx, dy, and dz
 		//dx -= boxl*rnd(dx/boxl);
-		double rnd_value;
+		float rnd_value;
 
 		rnd_value = ( ((dx/boxl)>0) ? std::floor((dx/boxl)+0.5) : std::ceil((dx/boxl)-0.5) );
 		dx -= boxl*rnd_value;
@@ -1317,34 +1317,34 @@ void soft_sphere_angular_energy_gpu(){
 
 	int N = nang+1;
 	int size_int = N*sizeof(int);
-	int size_double = N*sizeof(double);
-	int size_double3 = (nbead+1)*sizeof(double3);
+	int size_float = N*sizeof(float);
+	int size_float3 = (nbead+1)*sizeof(float3);
 	
 	int threads = (int)min(N, SECTION_SIZE);
 	int blocks = (int)ceil(1.0*N/SECTION_SIZE);
 	
-	soft_sphere_angular_energy_gpu_kernel<<<blocks, threads>>>(dev_ibead_ang, dev_kbead_ang, dev_unc_pos, boxl, N, e_ang_ss_coeff, dev_value_double);
+	soft_sphere_angular_energy_gpu_kernel<<<blocks, threads>>>(dev_ibead_ang, dev_kbead_ang, dev_unc_pos, boxl, N, e_ang_ss_coeff, dev_value_float);
 
   CudaCheckError();
 
-	hier_ks_scan(dev_value_double, dev_value_double, N, 0);
+	hier_ks_scan(dev_value_float, dev_value_float, N, 0);
 	
   CudaCheckError();
 
-	cudaMemcpy(&e_ang_ss, &dev_value_double[N-1], sizeof(double), cudaMemcpyDeviceToHost);
+	cudaMemcpy(&e_ang_ss, &dev_value_float[N-1], sizeof(float), cudaMemcpyDeviceToHost);
 
   CudaCheckError();
   clock_t ck1 = clock()-ck0;
-  ss_ang_energy_time+= ((double)ck1)/CLOCKS_PER_SEC;
+  ss_ang_energy_time+= ((float)ck1)/CLOCKS_PER_SEC;
 }
 
-__global__ void soft_sphere_angular_energy_gpu_kernel(int *dev_ibead_ang, int *dev_kbead_ang, double3 *dev_unc_pos, int boxl, int N, double coeff, double *dev_result){
+__global__ void soft_sphere_angular_energy_gpu_kernel(int *dev_ibead_ang, int *dev_kbead_ang, float3 *dev_unc_pos, int boxl, int N, float coeff, float *dev_result){
 	int i = blockIdx.x * blockDim.x + threadIdx.x;
 	
 	if(i > 0 && i < N){
 		int ibead, kbead;
-	  double3 r_ik;
-		double d,d6;
+	  float3 r_ik;
+		float d,d6;
 
     ibead = dev_ibead_ang[i];
     kbead = dev_kbead_ang[i];
@@ -1358,7 +1358,7 @@ __global__ void soft_sphere_angular_energy_gpu_kernel(int *dev_ibead_ang, int *d
     
 		// apply periodic boundary conditions to dx, dy, and dz
 		//r_ik.x -= boxl*rnd(r_ik.x/boxl);
-		double rnd_value;
+		float rnd_value;
 
 		rnd_value = ( ((r_ik.x/boxl)>0) ? std::floor((r_ik.x/boxl)+0.5) : std::ceil((r_ik.x/boxl)-0.5) );
 		r_ik.x -= boxl*rnd_value;
@@ -1388,7 +1388,7 @@ void soft_sphere_angular_forces_gpu(){
 	int N = nang + 1;
 	
 	int size_int = N*sizeof(int);
-	int size_double3 = (nbead+1)*sizeof(double3);
+	int size_float3 = (nbead+1)*sizeof(float3);
 	
 	int threads = (int)min(N, SECTION_SIZE);
 	int blocks = (int)ceil(1.0*N/SECTION_SIZE);
@@ -1397,18 +1397,18 @@ void soft_sphere_angular_forces_gpu(){
 
   CudaCheckError();
   clock_t ck1 = clock()-ck0;
-  ss_ang_forces_time+= ((double)ck1)/CLOCKS_PER_SEC;
+  ss_ang_forces_time+= ((float)ck1)/CLOCKS_PER_SEC;
 }
 
-__global__ void soft_sphere_angular_forces_kernel(int *dev_ibead_ang, int *dev_kbead_ang, double boxl, int N, double f_ang_ss_coeff, double3 *dev_unc_pos, double3 *dev_force){
+__global__ void soft_sphere_angular_forces_kernel(int *dev_ibead_ang, int *dev_kbead_ang, float boxl, int N, float f_ang_ss_coeff, float3 *dev_unc_pos, float3 *dev_force){
 									
 	int i = blockIdx.x * blockDim.x + threadIdx.x;
 
 	if(i > 0 && i < N) {
 		int ibead,kbead;
-		double dx,dy,dz,d,d8;
-		double fx,fy,fz;
-		double co1;
+		float dx,dy,dz,d,d8;
+		float fx,fy,fz;
+		float co1;
 
 		ibead = dev_ibead_ang[i];
 		kbead = dev_kbead_ang[i];
@@ -1418,7 +1418,7 @@ __global__ void soft_sphere_angular_forces_kernel(int *dev_ibead_ang, int *dev_k
 		dz = dev_unc_pos[kbead].z - dev_unc_pos[ibead].z;
 		// apply periodic boundary conditions to dx, dy, and dz
 		//dx -= boxl*rnd(dx/boxl);
-		double rnd_value;
+		float rnd_value;
 
 		rnd_value = ( ((dx/boxl)>0) ? std::floor((dx/boxl)+0.5) : std::ceil((dx/boxl)-0.5) );
 		dx -= boxl*rnd_value;
@@ -1464,8 +1464,8 @@ void fene_forces_gpu(){
 	int N = nbnd + 1;
 	
 	int size_int = N*sizeof(int);
-	int size_double3 = (nbead+1)*sizeof(double3);
-	int size_double = N*sizeof(double);
+	int size_float3 = (nbead+1)*sizeof(float3);
+	int size_float = N*sizeof(float);
 	
 	int threads = (int)min(N, SECTION_SIZE);
 	int blocks = (int)ceil(1.0*N/SECTION_SIZE);
@@ -1474,18 +1474,18 @@ void fene_forces_gpu(){
 
   CudaCheckError();
   clock_t ck1 = clock()-ck0;
-  fene_forces_time+= ((double)ck1)/CLOCKS_PER_SEC;
+  fene_forces_time+= ((float)ck1)/CLOCKS_PER_SEC;
 }
 
-__global__ void fene_forces_kernel(int *dev_ibead_bnd, int *dev_jbead_bnd, double *dev_pdb_dist, double boxl, int N, double dev_R0sq, double dev_k_bnd, double3 *dev_unc_pos, double3 *dev_force){
+__global__ void fene_forces_kernel(int *dev_ibead_bnd, int *dev_jbead_bnd, float *dev_pdb_dist, float boxl, int N, float dev_R0sq, float dev_k_bnd, float3 *dev_unc_pos, float3 *dev_force){
 									
 	int i = blockIdx.x * blockDim.x + threadIdx.x;
 
 	if(i > 0 && i < N) {
 		int ibead, jbead;
-		double dx, dy, dz, d, dev, dev2;
-		double fx, fy, fz;
-		double temp;
+		float dx, dy, dz, d, dev, dev2;
+		float fx, fy, fz;
+		float temp;
 
 		ibead = dev_ibead_bnd[i];
 		jbead = dev_jbead_bnd[i];
@@ -1495,7 +1495,7 @@ __global__ void fene_forces_kernel(int *dev_ibead_bnd, int *dev_jbead_bnd, doubl
 		dz = dev_unc_pos[jbead].z - dev_unc_pos[ibead].z;
 		// apply periodic boundary conditions to dx, dy, and dz
 		//dx -= boxl*rnd(dx/boxl);
-		double rnd_value;
+		float rnd_value;
     
 		rnd_value = ( ((dx/boxl)>0) ? std::floor((dx/boxl)+0.5) : std::ceil((dx/boxl)-0.5) );
 		dx -= boxl*rnd_value;

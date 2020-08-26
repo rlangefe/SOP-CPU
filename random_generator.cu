@@ -85,12 +85,12 @@ void Ran_Gen::set_seed( int seed ) {
 
 }
 
-double Ran_Gen::gasdev() {
+float Ran_Gen::gasdev() {
 
   using namespace std;
   // generate a gaussian deviate
 
-  double fac,rsq,v1,v2;
+  float fac,rsq,v1,v2;
   char line[2048];
 
   if( iset== 0 ) {
@@ -111,12 +111,12 @@ double Ran_Gen::gasdev() {
   
 }
 
-double Ran_Gen::ran2() {
+float Ran_Gen::ran2() {
 
   using namespace std;
 
   int j,k;
-  double temp;
+  float temp;
   char line[2048];
     
   if( mseed<=0 ) {

@@ -2,7 +2,7 @@
 #define PARAMS_H
 
 void load(int);
-void set_temp(double);
+void set_temp(float);
 void alloc_arrays();
 void release_bonds();
 void init_bonds(int);

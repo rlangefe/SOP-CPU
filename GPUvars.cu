@@ -42,9 +42,9 @@ inline void __cudaCheckError( const char *file, const int line )
 }
 
 // General
-double3 *dev_unc_pos;
-double *dev_value_double;
-double *dev_output_double;
+float3 *dev_unc_pos;
+float *dev_value_float;
+float *dev_output_float;
 int *dev_value_int;
 int *dev_output_int;
 
@@ -54,10 +54,10 @@ int *dev_ibead_lj_nat;
 int *dev_jbead_lj_nat;
 int *dev_itype_lj_nat;
 int *dev_jtype_lj_nat;
-double *dev_lj_nat_pdb_dist;
-double *dev_lj_nat_pdb_dist2;
-double *dev_lj_nat_pdb_dist6;
-double *dev_lj_nat_pdb_dist12;
+float *dev_lj_nat_pdb_dist;
+float *dev_lj_nat_pdb_dist2;
+float *dev_lj_nat_pdb_dist6;
+float *dev_lj_nat_pdb_dist12;
 
 
 // Non-Native
@@ -72,10 +72,10 @@ int *dev_ibead_neighbor_list_att;
 int *dev_jbead_neighbor_list_att;
 int *dev_itype_neighbor_list_att;
 int *dev_jtype_neighbor_list_att;
-double *dev_nl_lj_nat_pdb_dist;
-double *dev_nl_lj_nat_pdb_dist2;
-double *dev_nl_lj_nat_pdb_dist6;
-double *dev_nl_lj_nat_pdb_dist12;
+float *dev_nl_lj_nat_pdb_dist;
+float *dev_nl_lj_nat_pdb_dist2;
+float *dev_nl_lj_nat_pdb_dist6;
+float *dev_nl_lj_nat_pdb_dist12;
 
 // Non-Native
 int *dev_ibead_neighbor_list_rep;	
@@ -90,10 +90,10 @@ int *dev_ibead_pair_list_att;
 int *dev_jbead_pair_list_att;
 int *dev_itype_pair_list_att;
 int *dev_jtype_pair_list_att;
-double *dev_pl_lj_nat_pdb_dist;
-double *dev_pl_lj_nat_pdb_dist2;
-double *dev_pl_lj_nat_pdb_dist6;
-double *dev_pl_lj_nat_pdb_dist12;
+float *dev_pl_lj_nat_pdb_dist;
+float *dev_pl_lj_nat_pdb_dist2;
+float *dev_pl_lj_nat_pdb_dist6;
+float *dev_pl_lj_nat_pdb_dist12;
 
 // Non-Native
 int *dev_ibead_pair_list_rep;	
@@ -104,22 +104,22 @@ int *dev_jtype_pair_list_rep;
 // Fene Energy
 int *dev_ibead_bnd;
 int *dev_jbead_bnd;
-double *dev_pdb_dist;
+float *dev_pdb_dist;
 
 // Soft Sphere Angular Energy
 int *dev_ibead_ang;
 int *dev_kbead_ang;
 
-double3 *dev_force;
+float3 *dev_force;
 
 // Position
-double3 *dev_pos;
+float3 *dev_pos;
 
 // Velocity
-double3 *dev_vel;
+float3 *dev_vel;
 
 // Position and Velocity
-double3 *dev_incr;
+float3 *dev_incr;
 
 // cuRand
 curandState *devStates;
@@ -127,8 +127,8 @@ curandState *devStates;
 void allocate_gpu(){
     int N;
     int size_int;
-    int size_double;
-    int size_double3;
+    int size_float;
+    int size_float3;
 
     // Initial variable locations at 0 (on Host)
     for(int i = 0; i < 30; i++){
@@ -137,40 +137,40 @@ void allocate_gpu(){
 
     N = nbead+1;
     size_int = N*sizeof(int);
-    size_double = N*sizeof(double);
-    size_double3 = (nbead+1)*sizeof(double3);
+    size_float = N*sizeof(float);
+    size_float3 = (nbead+1)*sizeof(float3);
 
     if(usegpu_clear_force || usegpu_nl || usegpu_pl || usegpu_vdw_energy || usegpu_ss_ang_energy || usegpu_fene_energy || usegpu_vdw_force || usegpu_ss_ang_force || usegpu_fene_force || usegpu_pos || usegpu_vel || usegpu_rand_force){
         N = (nbead+1)*(nbead+1);
         size_int = N*sizeof(int);
-        size_double = N*sizeof(double);
-        size_double3 = (nbead+1)*sizeof(double3);
+        size_float = N*sizeof(float);
+        size_float3 = (nbead+1)*sizeof(float3);
         
-        cudaCheck(cudaMalloc((void **)&dev_unc_pos, size_double3));
-        cudaCheck(cudaMalloc((void **)&dev_value_double, size_double));
-        cudaCheck(cudaMalloc((void **)&dev_output_double, size_double));
+        cudaCheck(cudaMalloc((void **)&dev_unc_pos, size_float3));
+        cudaCheck(cudaMalloc((void **)&dev_value_float, size_float));
+        cudaCheck(cudaMalloc((void **)&dev_output_float, size_float));
         cudaCheck(cudaMalloc((void **)&dev_value_int, size_int));
         cudaCheck(cudaMalloc((void **)&dev_output_int, size_int));
 
         if(usegpu_nl){
             N = ncon_att+1;
             size_int = N*sizeof(int);
-            size_double = N*sizeof(double);
-            size_double3 = (nbead+1)*sizeof(double3);           
+            size_float = N*sizeof(float);
+            size_float3 = (nbead+1)*sizeof(float3);           
             // Native
             cudaCheck(cudaMalloc((void **)&dev_ibead_lj_nat, size_int));
             cudaCheck(cudaMalloc((void **)&dev_jbead_lj_nat, size_int));
             cudaCheck(cudaMalloc((void **)&dev_itype_lj_nat, size_int));
             cudaCheck(cudaMalloc((void **)&dev_jtype_lj_nat, size_int));
-            cudaCheck(cudaMalloc((void **)&dev_lj_nat_pdb_dist, size_double));
-            cudaCheck(cudaMalloc((void **)&dev_lj_nat_pdb_dist2, size_double));
-            cudaCheck(cudaMalloc((void **)&dev_lj_nat_pdb_dist6, size_double));
-            cudaCheck(cudaMalloc((void **)&dev_lj_nat_pdb_dist12, size_double));
+            cudaCheck(cudaMalloc((void **)&dev_lj_nat_pdb_dist, size_float));
+            cudaCheck(cudaMalloc((void **)&dev_lj_nat_pdb_dist2, size_float));
+            cudaCheck(cudaMalloc((void **)&dev_lj_nat_pdb_dist6, size_float));
+            cudaCheck(cudaMalloc((void **)&dev_lj_nat_pdb_dist12, size_float));
             
             N = ncon_rep+1;
             size_int = N*sizeof(int);
-            size_double = N*sizeof(double);
-            size_double3 = (nbead+1)*sizeof(double3);
+            size_float = N*sizeof(float);
+            size_float3 = (nbead+1)*sizeof(float3);
 
             // Non-Native
             cudaCheck(cudaMalloc((void **)&dev_ibead_lj_non_nat, size_int));	
@@ -182,23 +182,23 @@ void allocate_gpu(){
         if(usegpu_nl || usegpu_pl){
             N = ncon_att+1;
             size_int = N*sizeof(int);
-            size_double = N*sizeof(double);
-            size_double3 = (nbead+1)*sizeof(double3);
+            size_float = N*sizeof(float);
+            size_float3 = (nbead+1)*sizeof(float3);
 
             // Results Native
             cudaCheck(cudaMalloc((void **)&dev_ibead_neighbor_list_att, size_int));	
             cudaCheck(cudaMalloc((void **)&dev_jbead_neighbor_list_att, size_int));
             cudaCheck(cudaMalloc((void **)&dev_itype_neighbor_list_att, size_int));
             cudaCheck(cudaMalloc((void **)&dev_jtype_neighbor_list_att, size_int));
-            cudaCheck(cudaMalloc((void **)&dev_nl_lj_nat_pdb_dist, size_double));
-            cudaCheck(cudaMalloc((void **)&dev_nl_lj_nat_pdb_dist2, size_double));
-            cudaCheck(cudaMalloc((void **)&dev_nl_lj_nat_pdb_dist6, size_double));
-            cudaCheck(cudaMalloc((void **)&dev_nl_lj_nat_pdb_dist12, size_double));
+            cudaCheck(cudaMalloc((void **)&dev_nl_lj_nat_pdb_dist, size_float));
+            cudaCheck(cudaMalloc((void **)&dev_nl_lj_nat_pdb_dist2, size_float));
+            cudaCheck(cudaMalloc((void **)&dev_nl_lj_nat_pdb_dist6, size_float));
+            cudaCheck(cudaMalloc((void **)&dev_nl_lj_nat_pdb_dist12, size_float));
             
             N = ncon_rep+1;
             size_int = N*sizeof(int);
-            size_double = N*sizeof(double);
-            size_double3 = (nbead+1)*sizeof(double3); 
+            size_float = N*sizeof(float);
+            size_float3 = (nbead+1)*sizeof(float3); 
 
             // Results Non-Native
             cudaCheck(cudaMalloc((void **)&dev_ibead_neighbor_list_rep, size_int));	
@@ -220,23 +220,23 @@ void allocate_gpu(){
         if(usegpu_pl || usegpu_vdw_energy || usegpu_vdw_force){
             N = ncon_att+1;
             size_int = N*sizeof(int);
-            size_double = N*sizeof(double);
-            size_double3 = (nbead+1)*sizeof(double3);
+            size_float = N*sizeof(float);
+            size_float3 = (nbead+1)*sizeof(float3);
 
             // Native
             cudaCheck(cudaMalloc((void **)&dev_ibead_pair_list_att, size_int));	
             cudaCheck(cudaMalloc((void **)&dev_jbead_pair_list_att, size_int));
             cudaCheck(cudaMalloc((void **)&dev_itype_pair_list_att, size_int));
             cudaCheck(cudaMalloc((void **)&dev_jtype_pair_list_att, size_int));
-            cudaCheck(cudaMalloc((void **)&dev_pl_lj_nat_pdb_dist, size_double));
-            cudaCheck(cudaMalloc((void **)&dev_pl_lj_nat_pdb_dist2, size_double));
-            cudaCheck(cudaMalloc((void **)&dev_pl_lj_nat_pdb_dist6, size_double));
-            cudaCheck(cudaMalloc((void **)&dev_pl_lj_nat_pdb_dist12, size_double));
+            cudaCheck(cudaMalloc((void **)&dev_pl_lj_nat_pdb_dist, size_float));
+            cudaCheck(cudaMalloc((void **)&dev_pl_lj_nat_pdb_dist2, size_float));
+            cudaCheck(cudaMalloc((void **)&dev_pl_lj_nat_pdb_dist6, size_float));
+            cudaCheck(cudaMalloc((void **)&dev_pl_lj_nat_pdb_dist12, size_float));
 
             N = ncon_rep+1;
             size_int = N*sizeof(int);
-            size_double = N*sizeof(double);
-            size_double3 = (nbead+1)*sizeof(double3); 
+            size_float = N*sizeof(float);
+            size_float3 = (nbead+1)*sizeof(float3); 
 
             // Non-Native
             cudaCheck(cudaMalloc((void **)&dev_ibead_pair_list_rep, size_int));	
@@ -249,19 +249,19 @@ void allocate_gpu(){
         if(usegpu_fene_energy || usegpu_fene_force){
             N = nbnd+1;
             size_int = N*sizeof(int);
-            size_double = N*sizeof(double);
-            size_double3 = (nbead+1)*sizeof(double3); 
+            size_float = N*sizeof(float);
+            size_float3 = (nbead+1)*sizeof(float3); 
 
             cudaCheck(cudaMalloc((void **)&dev_ibead_bnd, size_int));
             cudaCheck(cudaMalloc((void **)&dev_jbead_bnd, size_int));
-            cudaCheck(cudaMalloc((void **)&dev_pdb_dist, size_double));
+            cudaCheck(cudaMalloc((void **)&dev_pdb_dist, size_float));
         }
 
         if(usegpu_ss_ang_energy || usegpu_ss_ang_force){
             N = nang+1;
             size_int = N*sizeof(int);
-            size_double = N*sizeof(double);
-            size_double3 = (nbead+1)*sizeof(double3); 
+            size_float = N*sizeof(float);
+            size_float3 = (nbead+1)*sizeof(float3); 
 
             cudaCheck(cudaMalloc((void **)&dev_ibead_ang, size_int));
             cudaCheck(cudaMalloc((void **)&dev_kbead_ang, size_int));
@@ -270,29 +270,29 @@ void allocate_gpu(){
         if(usegpu_ss_ang_force || usegpu_fene_force || usegpu_vdw_force || usegpu_vel || usegpu_pos || usegpu_rand_force || usegpu_clear_force){
             N = nbead+1;
             size_int = N*sizeof(int);
-            size_double = N*sizeof(double);
-            size_double3 = (nbead+1)*sizeof(double3); 
+            size_float = N*sizeof(float);
+            size_float3 = (nbead+1)*sizeof(float3); 
 
-            cudaCheck(cudaMalloc((void **)&dev_force, size_double3));
+            cudaCheck(cudaMalloc((void **)&dev_force, size_float3));
         }
 
         if(usegpu_pos){
             N = nbead+1;
             size_int = N*sizeof(int);
-            size_double = N*sizeof(double);
-            size_double3 = (nbead+1)*sizeof(double3); 
+            size_float = N*sizeof(float);
+            size_float3 = (nbead+1)*sizeof(float3); 
 
-            cudaCheck(cudaMalloc((void **)&dev_pos, size_double3));
+            cudaCheck(cudaMalloc((void **)&dev_pos, size_float3));
         }
 
         if(usegpu_pos || usegpu_vel){
             N = nbead+1;
             size_int = N*sizeof(int);
-            size_double = N*sizeof(double);
-            size_double3 = (nbead+1)*sizeof(double3);
+            size_float = N*sizeof(float);
+            size_float3 = (nbead+1)*sizeof(float3);
 
-            cudaCheck(cudaMalloc((void **)&dev_vel, size_double3));
-            cudaCheck(cudaMalloc((void **)&dev_incr, size_double3));
+            cudaCheck(cudaMalloc((void **)&dev_vel, size_float3));
+            cudaCheck(cudaMalloc((void **)&dev_incr, size_float3));
         }
 
         if(usegpu_rand_force){
@@ -314,8 +314,8 @@ void allocate_gpu(){
 void host_to_device(int op){
     int N;
     int size_int;
-	int size_double;
-	int size_double3;
+	int size_float;
+	int size_float3;
 
     if(debug){
         printf("%*d: ", 2, op);
@@ -328,8 +328,8 @@ void host_to_device(int op){
         case 0:
             N = ncon_att+1;
             size_int = N*sizeof(int);
-            size_double = N*sizeof(double);
-            size_double3 = (nbead+1)*sizeof(double3);
+            size_float = N*sizeof(float);
+            size_float3 = (nbead+1)*sizeof(float3);
 
             // Native
             if(variable_location[0] == 0){
@@ -337,30 +337,30 @@ void host_to_device(int op){
                 cudaCheck(cudaMemcpy(dev_jbead_lj_nat, jbead_lj_nat, size_int, cudaMemcpyHostToDevice));
                 cudaCheck(cudaMemcpy(dev_itype_lj_nat, itype_lj_nat, size_int, cudaMemcpyHostToDevice));
                 cudaCheck(cudaMemcpy(dev_jtype_lj_nat, jtype_lj_nat, size_int, cudaMemcpyHostToDevice));
-                cudaCheck(cudaMemcpy(dev_lj_nat_pdb_dist, lj_nat_pdb_dist, size_double, cudaMemcpyHostToDevice));
-                cudaCheck(cudaMemcpy(dev_lj_nat_pdb_dist2, lj_nat_pdb_dist2, size_double, cudaMemcpyHostToDevice));
-                cudaCheck(cudaMemcpy(dev_lj_nat_pdb_dist6, lj_nat_pdb_dist6, size_double, cudaMemcpyHostToDevice));
-                cudaCheck(cudaMemcpy(dev_lj_nat_pdb_dist12, lj_nat_pdb_dist12, size_double, cudaMemcpyHostToDevice));
+                cudaCheck(cudaMemcpy(dev_lj_nat_pdb_dist, lj_nat_pdb_dist, size_float, cudaMemcpyHostToDevice));
+                cudaCheck(cudaMemcpy(dev_lj_nat_pdb_dist2, lj_nat_pdb_dist2, size_float, cudaMemcpyHostToDevice));
+                cudaCheck(cudaMemcpy(dev_lj_nat_pdb_dist6, lj_nat_pdb_dist6, size_float, cudaMemcpyHostToDevice));
+                cudaCheck(cudaMemcpy(dev_lj_nat_pdb_dist12, lj_nat_pdb_dist12, size_float, cudaMemcpyHostToDevice));
 
                 variable_location[0] = 1;
             }
 
             if(variable_location[1] == 0){
-                cudaCheck(cudaMemcpy(dev_lj_nat_pdb_dist, lj_nat_pdb_dist, size_double, cudaMemcpyHostToDevice));
+                cudaCheck(cudaMemcpy(dev_lj_nat_pdb_dist, lj_nat_pdb_dist, size_float, cudaMemcpyHostToDevice));
                 
                 variable_location[1] = 1;
             }
 
             if(variable_location[2] == 0){
-                cudaCheck(cudaMemcpy(dev_unc_pos, unc_pos, size_double3, cudaMemcpyHostToDevice));
+                cudaCheck(cudaMemcpy(dev_unc_pos, unc_pos, size_float3, cudaMemcpyHostToDevice));
 
                 variable_location[2] = 1;
             }
 
             N = ncon_rep+1;
             size_int = N*sizeof(int);
-            size_double = N*sizeof(double);
-            size_double3 = (nbead+1)*sizeof(double3);
+            size_float = N*sizeof(float);
+            size_float3 = (nbead+1)*sizeof(float3);
 
             // Non-Native
             if(variable_location[3] == 0){
@@ -373,7 +373,7 @@ void host_to_device(int op){
             }
 
             if(variable_location[2] == 0){
-                cudaCheck(cudaMemcpy(dev_unc_pos, unc_pos, size_double3, cudaMemcpyHostToDevice));
+                cudaCheck(cudaMemcpy(dev_unc_pos, unc_pos, size_float3, cudaMemcpyHostToDevice));
 
                 variable_location[2] = 1;
             }
@@ -390,8 +390,8 @@ void host_to_device(int op){
         case 1:
             N = nnl_att+1;
             size_int = N*sizeof(int);
-            size_double = N*sizeof(double);
-            size_double3 = (nbead+1)*sizeof(double3);
+            size_float = N*sizeof(float);
+            size_float3 = (nbead+1)*sizeof(float3);
 
             // Native
             if(variable_location[4] == 0){
@@ -404,24 +404,24 @@ void host_to_device(int op){
             }
 
             if(variable_location[2] == 0){
-                cudaCheck(cudaMemcpy(dev_unc_pos, unc_pos, size_double3, cudaMemcpyHostToDevice));
+                cudaCheck(cudaMemcpy(dev_unc_pos, unc_pos, size_float3, cudaMemcpyHostToDevice));
 
                 variable_location[2] = 1;
             }
 
             if(variable_location[5] == 0){
-                cudaCheck(cudaMemcpy(dev_nl_lj_nat_pdb_dist, nl_lj_nat_pdb_dist, size_double, cudaMemcpyHostToDevice));
-                cudaCheck(cudaMemcpy(dev_nl_lj_nat_pdb_dist2, nl_lj_nat_pdb_dist2, size_double, cudaMemcpyHostToDevice));
-                cudaCheck(cudaMemcpy(dev_nl_lj_nat_pdb_dist6, nl_lj_nat_pdb_dist6, size_double, cudaMemcpyHostToDevice));
-                cudaCheck(cudaMemcpy(dev_nl_lj_nat_pdb_dist12, nl_lj_nat_pdb_dist12, size_double, cudaMemcpyHostToDevice));
+                cudaCheck(cudaMemcpy(dev_nl_lj_nat_pdb_dist, nl_lj_nat_pdb_dist, size_float, cudaMemcpyHostToDevice));
+                cudaCheck(cudaMemcpy(dev_nl_lj_nat_pdb_dist2, nl_lj_nat_pdb_dist2, size_float, cudaMemcpyHostToDevice));
+                cudaCheck(cudaMemcpy(dev_nl_lj_nat_pdb_dist6, nl_lj_nat_pdb_dist6, size_float, cudaMemcpyHostToDevice));
+                cudaCheck(cudaMemcpy(dev_nl_lj_nat_pdb_dist12, nl_lj_nat_pdb_dist12, size_float, cudaMemcpyHostToDevice));
 
                 variable_location[5] = 1;
             }
 
             N = nnl_rep+1;
             size_int = N*sizeof(int);
-            size_double = N*sizeof(double);
-            size_double3 = (nbead+1)*sizeof(double3);
+            size_float = N*sizeof(float);
+            size_float3 = (nbead+1)*sizeof(float3);
 
             // Non-Native
             if(variable_location[6] == 0){
@@ -434,7 +434,7 @@ void host_to_device(int op){
             }
 
             if(variable_location[2] == 0){
-                cudaCheck(cudaMemcpy(dev_unc_pos, unc_pos, size_double3, cudaMemcpyHostToDevice));
+                cudaCheck(cudaMemcpy(dev_unc_pos, unc_pos, size_float3, cudaMemcpyHostToDevice));
 
                 variable_location[2] = 1;
             }
@@ -448,8 +448,8 @@ void host_to_device(int op){
         case 2:
             N = nil_att+1;
             size_int = N*sizeof(int);
-            size_double = N*sizeof(double);
-            size_double3 = (nbead+1)*sizeof(double3);
+            size_float = N*sizeof(float);
+            size_float3 = (nbead+1)*sizeof(float3);
 
             // Native
             if(variable_location[7] == 0){
@@ -458,24 +458,24 @@ void host_to_device(int op){
                 cudaCheck(cudaMemcpy(dev_jbead_pair_list_att, jbead_pair_list_att, size_int, cudaMemcpyHostToDevice));
                 cudaCheck(cudaMemcpy(dev_itype_pair_list_att, itype_pair_list_att, size_int, cudaMemcpyHostToDevice));
                 cudaCheck(cudaMemcpy(dev_jtype_pair_list_att, jtype_pair_list_att, size_int, cudaMemcpyHostToDevice));
-                cudaCheck(cudaMemcpy(dev_pl_lj_nat_pdb_dist, pl_lj_nat_pdb_dist, size_double, cudaMemcpyHostToDevice));
-                cudaCheck(cudaMemcpy(dev_pl_lj_nat_pdb_dist2, pl_lj_nat_pdb_dist2, size_double, cudaMemcpyHostToDevice));
-                cudaCheck(cudaMemcpy(dev_pl_lj_nat_pdb_dist6, pl_lj_nat_pdb_dist6, size_double, cudaMemcpyHostToDevice));
-                cudaCheck(cudaMemcpy(dev_pl_lj_nat_pdb_dist12, pl_lj_nat_pdb_dist12, size_double, cudaMemcpyHostToDevice));
+                cudaCheck(cudaMemcpy(dev_pl_lj_nat_pdb_dist, pl_lj_nat_pdb_dist, size_float, cudaMemcpyHostToDevice));
+                cudaCheck(cudaMemcpy(dev_pl_lj_nat_pdb_dist2, pl_lj_nat_pdb_dist2, size_float, cudaMemcpyHostToDevice));
+                cudaCheck(cudaMemcpy(dev_pl_lj_nat_pdb_dist6, pl_lj_nat_pdb_dist6, size_float, cudaMemcpyHostToDevice));
+                cudaCheck(cudaMemcpy(dev_pl_lj_nat_pdb_dist12, pl_lj_nat_pdb_dist12, size_float, cudaMemcpyHostToDevice));
 
                 variable_location[7] = 1;
             }
             
             if(variable_location[2] == 0){
-                cudaCheck(cudaMemcpy(dev_unc_pos, unc_pos, size_double3, cudaMemcpyHostToDevice));
+                cudaCheck(cudaMemcpy(dev_unc_pos, unc_pos, size_float3, cudaMemcpyHostToDevice));
 
                 variable_location[2] = 1;
             }
 
             N = nil_rep+1;
             size_int = N*sizeof(int);
-            size_double = N*sizeof(double);
-            size_double3 = (nbead+1)*sizeof(double3);
+            size_float = N*sizeof(float);
+            size_float3 = (nbead+1)*sizeof(float3);
 
             // Non-Native
             if(variable_location[8] == 0){
@@ -488,7 +488,7 @@ void host_to_device(int op){
             }
 
             if(variable_location[2] == 0){
-                cudaCheck(cudaMemcpy(dev_unc_pos, unc_pos, size_double3, cudaMemcpyHostToDevice));
+                cudaCheck(cudaMemcpy(dev_unc_pos, unc_pos, size_float3, cudaMemcpyHostToDevice));
 
                 variable_location[2] = 1;
             }
@@ -499,8 +499,8 @@ void host_to_device(int op){
         case 3:
             N = nbnd+1;
             size_int = N*sizeof(int);
-            size_double = N*sizeof(double);
-            size_double3 = (nbead+1)*sizeof(double3);
+            size_float = N*sizeof(float);
+            size_float3 = (nbead+1)*sizeof(float3);
 
             if(variable_location[9] == 0){
                 cudaCheck(cudaMemcpy(dev_ibead_bnd, ibead_bnd, size_int, cudaMemcpyHostToDevice));
@@ -510,13 +510,13 @@ void host_to_device(int op){
             }
 
             if(variable_location[2] == 0){
-                cudaCheck(cudaMemcpy(dev_unc_pos, unc_pos, size_double3, cudaMemcpyHostToDevice));
+                cudaCheck(cudaMemcpy(dev_unc_pos, unc_pos, size_float3, cudaMemcpyHostToDevice));
 
                 variable_location[2] = 1;
             }
 
             if(variable_location[10] == 0){
-                cudaCheck(cudaMemcpy(dev_pdb_dist, pdb_dist, size_double, cudaMemcpyHostToDevice));
+                cudaCheck(cudaMemcpy(dev_pdb_dist, pdb_dist, size_float, cudaMemcpyHostToDevice));
 
                 variable_location[10] = 1;
             }
@@ -527,8 +527,8 @@ void host_to_device(int op){
         case 4:
             N = nang+1;
             size_int = N*sizeof(int);
-            size_double = N*sizeof(double);
-            size_double3 = (nbead+1)*sizeof(double3);
+            size_float = N*sizeof(float);
+            size_float3 = (nbead+1)*sizeof(float3);
 
             if(variable_location[11] == 0){
                 cudaCheck(cudaMemcpy(dev_ibead_ang, ibead_ang, size_int, cudaMemcpyHostToDevice));
@@ -538,7 +538,7 @@ void host_to_device(int op){
             }
 
             if(variable_location[2] == 0){
-                cudaCheck(cudaMemcpy(dev_unc_pos, unc_pos, size_double3, cudaMemcpyHostToDevice));
+                cudaCheck(cudaMemcpy(dev_unc_pos, unc_pos, size_float3, cudaMemcpyHostToDevice));
 
                 variable_location[2] = 1;
             }
@@ -549,8 +549,8 @@ void host_to_device(int op){
         case 5:
             N = nil_att+1;
             size_int = N*sizeof(int);
-            size_double = N*sizeof(double);
-            size_double3 = (nbead+1)*sizeof(double3);
+            size_float = N*sizeof(float);
+            size_float3 = (nbead+1)*sizeof(float3);
 
             // Native
             if(variable_location[7] == 0){
@@ -558,30 +558,30 @@ void host_to_device(int op){
                 cudaCheck(cudaMemcpy(dev_jbead_pair_list_att, jbead_pair_list_att, size_int, cudaMemcpyHostToDevice));
                 cudaCheck(cudaMemcpy(dev_itype_pair_list_att, itype_pair_list_att, size_int, cudaMemcpyHostToDevice));
                 cudaCheck(cudaMemcpy(dev_jtype_pair_list_att, jtype_pair_list_att, size_int, cudaMemcpyHostToDevice));
-                cudaCheck(cudaMemcpy(dev_pl_lj_nat_pdb_dist, pl_lj_nat_pdb_dist, size_double, cudaMemcpyHostToDevice));
-                cudaCheck(cudaMemcpy(dev_pl_lj_nat_pdb_dist2, pl_lj_nat_pdb_dist2, size_double, cudaMemcpyHostToDevice));
-                cudaCheck(cudaMemcpy(dev_pl_lj_nat_pdb_dist6, pl_lj_nat_pdb_dist6, size_double, cudaMemcpyHostToDevice));
-                cudaCheck(cudaMemcpy(dev_pl_lj_nat_pdb_dist12, pl_lj_nat_pdb_dist12, size_double, cudaMemcpyHostToDevice));
+                cudaCheck(cudaMemcpy(dev_pl_lj_nat_pdb_dist, pl_lj_nat_pdb_dist, size_float, cudaMemcpyHostToDevice));
+                cudaCheck(cudaMemcpy(dev_pl_lj_nat_pdb_dist2, pl_lj_nat_pdb_dist2, size_float, cudaMemcpyHostToDevice));
+                cudaCheck(cudaMemcpy(dev_pl_lj_nat_pdb_dist6, pl_lj_nat_pdb_dist6, size_float, cudaMemcpyHostToDevice));
+                cudaCheck(cudaMemcpy(dev_pl_lj_nat_pdb_dist12, pl_lj_nat_pdb_dist12, size_float, cudaMemcpyHostToDevice));
 
                 variable_location[7] = 1;
             }
 
             if(variable_location[2] == 0){
-                cudaCheck(cudaMemcpy(dev_unc_pos, unc_pos, size_double3, cudaMemcpyHostToDevice));
+                cudaCheck(cudaMemcpy(dev_unc_pos, unc_pos, size_float3, cudaMemcpyHostToDevice));
 
                 variable_location[2] = 1;
             }
 
             if(variable_location[12] == 0){
-                cudaCheck(cudaMemcpy(dev_force, force, size_double3, cudaMemcpyHostToDevice));
+                cudaCheck(cudaMemcpy(dev_force, force, size_float3, cudaMemcpyHostToDevice));
 
                 variable_location[12] = 1;
             }
 
             N = nil_rep+1;
             size_int = N*sizeof(int);
-            size_double = N*sizeof(double);
-            size_double3 = (nbead+1)*sizeof(double3);
+            size_float = N*sizeof(float);
+            size_float3 = (nbead+1)*sizeof(float3);
 
             // Non-Native
             if(variable_location[8] == 0){
@@ -594,13 +594,13 @@ void host_to_device(int op){
             }
 
             if(variable_location[2] == 0){
-                cudaCheck(cudaMemcpy(dev_unc_pos, unc_pos, size_double3, cudaMemcpyHostToDevice));
+                cudaCheck(cudaMemcpy(dev_unc_pos, unc_pos, size_float3, cudaMemcpyHostToDevice));
 
                 variable_location[2] = 1;
             }
 
             if(variable_location[12] == 0){
-                cudaCheck(cudaMemcpy(dev_force, force, size_double3, cudaMemcpyHostToDevice));
+                cudaCheck(cudaMemcpy(dev_force, force, size_float3, cudaMemcpyHostToDevice));
 
                 variable_location[12] = 1;
             }
@@ -611,8 +611,8 @@ void host_to_device(int op){
         case 6:
             N = nbnd+1;
             size_int = N*sizeof(int);
-            size_double = N*sizeof(double);
-            size_double3 = (nbead+1)*sizeof(double3);
+            size_float = N*sizeof(float);
+            size_float3 = (nbead+1)*sizeof(float3);
 
             if(variable_location[9] == 0){
                 cudaCheck(cudaMemcpy(dev_ibead_bnd, ibead_bnd, size_int, cudaMemcpyHostToDevice));
@@ -622,7 +622,7 @@ void host_to_device(int op){
             }
             
             if(variable_location[10] == 0){
-                cudaCheck(cudaMemcpy(dev_pdb_dist, pdb_dist, size_double, cudaMemcpyHostToDevice));
+                cudaCheck(cudaMemcpy(dev_pdb_dist, pdb_dist, size_float, cudaMemcpyHostToDevice));
 
                 variable_location[10] = 1;
             }
@@ -635,13 +635,13 @@ void host_to_device(int op){
             }
             
             if(variable_location[2] == 0){
-                cudaCheck(cudaMemcpy(dev_unc_pos, unc_pos, size_double3, cudaMemcpyHostToDevice));
+                cudaCheck(cudaMemcpy(dev_unc_pos, unc_pos, size_float3, cudaMemcpyHostToDevice));
 
                 variable_location[2] = 1;
             }
 
             if(variable_location[12] == 0){
-                cudaCheck(cudaMemcpy(dev_force, force, size_double3, cudaMemcpyHostToDevice));
+                cudaCheck(cudaMemcpy(dev_force, force, size_float3, cudaMemcpyHostToDevice));
 
                 variable_location[12] = 1;
             }
@@ -653,8 +653,8 @@ void host_to_device(int op){
         case 7:
             N = nang+1;
             size_int = N*sizeof(int);
-            size_double = N*sizeof(double);
-            size_double3 = (nbead+1)*sizeof(double3);
+            size_float = N*sizeof(float);
+            size_float3 = (nbead+1)*sizeof(float3);
 
             if(variable_location[11] == 0){
                 cudaCheck(cudaMemcpy(dev_ibead_ang, ibead_ang, size_int, cudaMemcpyHostToDevice));
@@ -663,13 +663,13 @@ void host_to_device(int op){
                 variable_location[11] = 1;
             }
             if(variable_location[2] == 0){
-                cudaCheck(cudaMemcpy(dev_unc_pos, unc_pos, size_double3, cudaMemcpyHostToDevice));
+                cudaCheck(cudaMemcpy(dev_unc_pos, unc_pos, size_float3, cudaMemcpyHostToDevice));
 
                 variable_location[2] = 1;
             }
 
             if(variable_location[12] == 0){
-                cudaCheck(cudaMemcpy(dev_force, force, size_double3, cudaMemcpyHostToDevice));
+                cudaCheck(cudaMemcpy(dev_force, force, size_float3, cudaMemcpyHostToDevice));
 
                 variable_location[12] = 1;
             }
@@ -680,11 +680,11 @@ void host_to_device(int op){
         case 8:
             N = nbead+1;
             size_int = N*sizeof(int);
-            size_double = N*sizeof(double);
-            size_double3 = (nbead+1)*sizeof(double3);
+            size_float = N*sizeof(float);
+            size_float3 = (nbead+1)*sizeof(float3);
 
             if(variable_location[12] == 0){
-                cudaCheck(cudaMemcpy(dev_force, force, size_double3, cudaMemcpyHostToDevice));
+                cudaCheck(cudaMemcpy(dev_force, force, size_float3, cudaMemcpyHostToDevice));
 
                 variable_location[12] = 1;
             }
@@ -695,35 +695,35 @@ void host_to_device(int op){
         case 9:
             N = nbead+1;
             size_int = N*sizeof(int);
-            size_double = N*sizeof(double);
-            size_double3 = (nbead+1)*sizeof(double3);
+            size_float = N*sizeof(float);
+            size_float3 = (nbead+1)*sizeof(float3);
 
             if(variable_location[2] == 0){
-                cudaCheck(cudaMemcpy(dev_unc_pos, unc_pos, size_double3, cudaMemcpyHostToDevice));
+                cudaCheck(cudaMemcpy(dev_unc_pos, unc_pos, size_float3, cudaMemcpyHostToDevice));
 
                 variable_location[2] = 1;
             }
 
             if(variable_location[12] == 0){
-                cudaCheck(cudaMemcpy(dev_force, force, size_double3, cudaMemcpyHostToDevice));
+                cudaCheck(cudaMemcpy(dev_force, force, size_float3, cudaMemcpyHostToDevice));
 
                 variable_location[12] = 1;
             }
 
             if(variable_location[13] == 0){
-                cudaCheck(cudaMemcpy(dev_incr, incr, size_double3, cudaMemcpyHostToDevice));
+                cudaCheck(cudaMemcpy(dev_incr, incr, size_float3, cudaMemcpyHostToDevice));
 
                 variable_location[13] = 1;
             }
 
             if(variable_location[14] == 0){
-                cudaCheck(cudaMemcpy(dev_vel, vel, size_double3, cudaMemcpyHostToDevice));
+                cudaCheck(cudaMemcpy(dev_vel, vel, size_float3, cudaMemcpyHostToDevice));
 
                 variable_location[14] = 1;
             }
 
             if(variable_location[15] == 0){
-                cudaCheck(cudaMemcpy(dev_pos, pos, size_double3, cudaMemcpyHostToDevice));
+                cudaCheck(cudaMemcpy(dev_pos, pos, size_float3, cudaMemcpyHostToDevice));
 
                 variable_location[15] = 1;
             }
@@ -734,23 +734,23 @@ void host_to_device(int op){
         case 10:
             N = nbead+1;
             size_int = N*sizeof(int);
-            size_double = N*sizeof(double);
-            size_double3 = (nbead+1)*sizeof(double3);
+            size_float = N*sizeof(float);
+            size_float3 = (nbead+1)*sizeof(float3);
 
             if(variable_location[12] == 0){
-                cudaCheck(cudaMemcpy(dev_force, force, size_double3, cudaMemcpyHostToDevice));
+                cudaCheck(cudaMemcpy(dev_force, force, size_float3, cudaMemcpyHostToDevice));
 
                 variable_location[12] = 1;
             }
 
             if(variable_location[13] == 0){
-                cudaCheck(cudaMemcpy(dev_incr, incr, size_double3, cudaMemcpyHostToDevice));
+                cudaCheck(cudaMemcpy(dev_incr, incr, size_float3, cudaMemcpyHostToDevice));
 
                 variable_location[13] = 1;
             }
 
             if(variable_location[14] == 0){
-                cudaCheck(cudaMemcpy(dev_vel, vel, size_double3, cudaMemcpyHostToDevice));
+                cudaCheck(cudaMemcpy(dev_vel, vel, size_float3, cudaMemcpyHostToDevice));
 
                 variable_location[14] = 1;
             }
@@ -786,8 +786,8 @@ void host_to_device(int op){
 void device_to_host(int op){
     int N;
     int size_int;
-	int size_double;
-	int size_double3;
+	int size_float;
+	int size_float3;
 
     if(debug){
         printf("%*d: ", 2, op);
@@ -803,8 +803,8 @@ void device_to_host(int op){
         case 0:
             N = ncon_att+1;
             size_int = N*sizeof(int);
-            size_double = N*sizeof(double);
-            size_double3 = (nbead+1)*sizeof(double3);
+            size_float = N*sizeof(float);
+            size_float3 = (nbead+1)*sizeof(float3);
 
             // Native
             if(variable_location[0] == 1){
@@ -812,30 +812,30 @@ void device_to_host(int op){
                 cudaCheck(cudaMemcpy(jbead_lj_nat, dev_jbead_lj_nat, size_int, cudaMemcpyDeviceToHost));
                 cudaCheck(cudaMemcpy(itype_lj_nat, dev_itype_lj_nat, size_int, cudaMemcpyDeviceToHost));
                 cudaCheck(cudaMemcpy(jtype_lj_nat, dev_jtype_lj_nat, size_int, cudaMemcpyDeviceToHost));
-                cudaCheck(cudaMemcpy(lj_nat_pdb_dist, dev_lj_nat_pdb_dist, size_double, cudaMemcpyDeviceToHost));
-                cudaCheck(cudaMemcpy(lj_nat_pdb_dist2, dev_lj_nat_pdb_dist2, size_double, cudaMemcpyDeviceToHost));
-                cudaCheck(cudaMemcpy(lj_nat_pdb_dist6, dev_lj_nat_pdb_dist6, size_double, cudaMemcpyDeviceToHost));
-                cudaCheck(cudaMemcpy(lj_nat_pdb_dist12, dev_lj_nat_pdb_dist12, size_double, cudaMemcpyDeviceToHost));
+                cudaCheck(cudaMemcpy(lj_nat_pdb_dist, dev_lj_nat_pdb_dist, size_float, cudaMemcpyDeviceToHost));
+                cudaCheck(cudaMemcpy(lj_nat_pdb_dist2, dev_lj_nat_pdb_dist2, size_float, cudaMemcpyDeviceToHost));
+                cudaCheck(cudaMemcpy(lj_nat_pdb_dist6, dev_lj_nat_pdb_dist6, size_float, cudaMemcpyDeviceToHost));
+                cudaCheck(cudaMemcpy(lj_nat_pdb_dist12, dev_lj_nat_pdb_dist12, size_float, cudaMemcpyDeviceToHost));
 
                 variable_location[0] = 0;
             }
 
             if(variable_location[1] == 1){
-                cudaCheck(cudaMemcpy(lj_nat_pdb_dist, dev_lj_nat_pdb_dist, size_double, cudaMemcpyDeviceToHost));
+                cudaCheck(cudaMemcpy(lj_nat_pdb_dist, dev_lj_nat_pdb_dist, size_float, cudaMemcpyDeviceToHost));
                 
                 variable_location[1] = 0;
             }
 
             if(variable_location[2] == 1){
-                cudaCheck(cudaMemcpy(unc_pos, dev_unc_pos, size_double3, cudaMemcpyDeviceToHost));
+                cudaCheck(cudaMemcpy(unc_pos, dev_unc_pos, size_float3, cudaMemcpyDeviceToHost));
 
                 variable_location[2] = 0;
             }
 
             N = ncon_rep+1;
             size_int = N*sizeof(int);
-            size_double = N*sizeof(double);
-            size_double3 = (nbead+1)*sizeof(double3);
+            size_float = N*sizeof(float);
+            size_float3 = (nbead+1)*sizeof(float3);
 
             // Non-Native
             if(variable_location[3] == 1){
@@ -848,7 +848,7 @@ void device_to_host(int op){
             }
 
             if(variable_location[2] == 1){
-                cudaCheck(cudaMemcpy(unc_pos, dev_unc_pos, size_double3, cudaMemcpyDeviceToHost));
+                cudaCheck(cudaMemcpy(unc_pos, dev_unc_pos, size_float3, cudaMemcpyDeviceToHost));
 
                 variable_location[2] = 0;
             }
@@ -864,8 +864,8 @@ void device_to_host(int op){
         case 1:
             N = nnl_att+1;
             size_int = N*sizeof(int);
-            size_double = N*sizeof(double);
-            size_double3 = (nbead+1)*sizeof(double3);
+            size_float = N*sizeof(float);
+            size_float3 = (nbead+1)*sizeof(float3);
 
             // Native
             if(variable_location[4] == 1){
@@ -878,24 +878,24 @@ void device_to_host(int op){
             }
 
             if(variable_location[2] == 1){
-                cudaCheck(cudaMemcpy(unc_pos, dev_unc_pos, size_double3, cudaMemcpyDeviceToHost));
+                cudaCheck(cudaMemcpy(unc_pos, dev_unc_pos, size_float3, cudaMemcpyDeviceToHost));
 
                 variable_location[2] = 0;
             }
 
             if(variable_location[5] == 1){
-                cudaCheck(cudaMemcpy(nl_lj_nat_pdb_dist, dev_nl_lj_nat_pdb_dist, size_double, cudaMemcpyDeviceToHost));
-                cudaCheck(cudaMemcpy(nl_lj_nat_pdb_dist2, dev_nl_lj_nat_pdb_dist2, size_double, cudaMemcpyDeviceToHost));
-                cudaCheck(cudaMemcpy(nl_lj_nat_pdb_dist6, dev_nl_lj_nat_pdb_dist6, size_double, cudaMemcpyDeviceToHost));
-                cudaCheck(cudaMemcpy(nl_lj_nat_pdb_dist12, dev_nl_lj_nat_pdb_dist12, size_double, cudaMemcpyDeviceToHost));
+                cudaCheck(cudaMemcpy(nl_lj_nat_pdb_dist, dev_nl_lj_nat_pdb_dist, size_float, cudaMemcpyDeviceToHost));
+                cudaCheck(cudaMemcpy(nl_lj_nat_pdb_dist2, dev_nl_lj_nat_pdb_dist2, size_float, cudaMemcpyDeviceToHost));
+                cudaCheck(cudaMemcpy(nl_lj_nat_pdb_dist6, dev_nl_lj_nat_pdb_dist6, size_float, cudaMemcpyDeviceToHost));
+                cudaCheck(cudaMemcpy(nl_lj_nat_pdb_dist12, dev_nl_lj_nat_pdb_dist12, size_float, cudaMemcpyDeviceToHost));
 
                 variable_location[5] = 0;
             }
 
             N = nnl_rep+1;
             size_int = N*sizeof(int);
-            size_double = N*sizeof(double);
-            size_double3 = (nbead+1)*sizeof(double3);
+            size_float = N*sizeof(float);
+            size_float3 = (nbead+1)*sizeof(float3);
 
             // Non-Native
             if(variable_location[6] == 1){
@@ -908,7 +908,7 @@ void device_to_host(int op){
             }
 
             if(variable_location[2] == 1){
-                cudaCheck(cudaMemcpy(unc_pos, dev_unc_pos, size_double3, cudaMemcpyDeviceToHost));
+                cudaCheck(cudaMemcpy(unc_pos, dev_unc_pos, size_float3, cudaMemcpyDeviceToHost));
 
                 variable_location[2] = 0;
             }
@@ -922,8 +922,8 @@ void device_to_host(int op){
         case 2:
             N = nil_att+1;
             size_int = N*sizeof(int);
-            size_double = N*sizeof(double);
-            size_double3 = (nbead+1)*sizeof(double3);
+            size_float = N*sizeof(float);
+            size_float3 = (nbead+1)*sizeof(float3);
 
             // Native
             if(variable_location[7] == 1){
@@ -931,24 +931,24 @@ void device_to_host(int op){
                 cudaCheck(cudaMemcpy(jbead_pair_list_att, dev_jbead_pair_list_att, size_int, cudaMemcpyDeviceToHost));
                 cudaCheck(cudaMemcpy(itype_pair_list_att, dev_itype_pair_list_att, size_int, cudaMemcpyDeviceToHost));
                 cudaCheck(cudaMemcpy(jtype_pair_list_att, dev_jtype_pair_list_att, size_int, cudaMemcpyDeviceToHost));
-                cudaCheck(cudaMemcpy(pl_lj_nat_pdb_dist, dev_pl_lj_nat_pdb_dist, size_double, cudaMemcpyDeviceToHost));
-                cudaCheck(cudaMemcpy(pl_lj_nat_pdb_dist2, dev_pl_lj_nat_pdb_dist2, size_double, cudaMemcpyDeviceToHost));
-                cudaCheck(cudaMemcpy(pl_lj_nat_pdb_dist6, dev_pl_lj_nat_pdb_dist6, size_double, cudaMemcpyDeviceToHost));
-                cudaCheck(cudaMemcpy(pl_lj_nat_pdb_dist12, dev_pl_lj_nat_pdb_dist12, size_double, cudaMemcpyDeviceToHost));
+                cudaCheck(cudaMemcpy(pl_lj_nat_pdb_dist, dev_pl_lj_nat_pdb_dist, size_float, cudaMemcpyDeviceToHost));
+                cudaCheck(cudaMemcpy(pl_lj_nat_pdb_dist2, dev_pl_lj_nat_pdb_dist2, size_float, cudaMemcpyDeviceToHost));
+                cudaCheck(cudaMemcpy(pl_lj_nat_pdb_dist6, dev_pl_lj_nat_pdb_dist6, size_float, cudaMemcpyDeviceToHost));
+                cudaCheck(cudaMemcpy(pl_lj_nat_pdb_dist12, dev_pl_lj_nat_pdb_dist12, size_float, cudaMemcpyDeviceToHost));
 
                 variable_location[7] = 0;
             }
             
             if(variable_location[2] == 1){
-                cudaCheck(cudaMemcpy(unc_pos, dev_unc_pos, size_double3, cudaMemcpyDeviceToHost));
+                cudaCheck(cudaMemcpy(unc_pos, dev_unc_pos, size_float3, cudaMemcpyDeviceToHost));
 
                 variable_location[2] = 0;
             }
 
             N = nil_rep+1;
             size_int = N*sizeof(int);
-            size_double = N*sizeof(double);
-            size_double3 = (nbead+1)*sizeof(double3);
+            size_float = N*sizeof(float);
+            size_float3 = (nbead+1)*sizeof(float3);
 
             // Non-Native
             if(variable_location[8] == 1){
@@ -961,7 +961,7 @@ void device_to_host(int op){
             }
 
             if(variable_location[2] == 1){
-                cudaCheck(cudaMemcpy(unc_pos, dev_unc_pos, size_double3, cudaMemcpyDeviceToHost));
+                cudaCheck(cudaMemcpy(unc_pos, dev_unc_pos, size_float3, cudaMemcpyDeviceToHost));
 
                 variable_location[2] = 0;
             }
@@ -972,8 +972,8 @@ void device_to_host(int op){
         case 3:
             N = nbnd+1;
             size_int = N*sizeof(int);
-            size_double = N*sizeof(double);
-            size_double3 = (nbead+1)*sizeof(double3);
+            size_float = N*sizeof(float);
+            size_float3 = (nbead+1)*sizeof(float3);
 
             if(variable_location[9] == 1){
                 cudaCheck(cudaMemcpy(ibead_bnd, dev_ibead_bnd, size_int, cudaMemcpyDeviceToHost));
@@ -983,13 +983,13 @@ void device_to_host(int op){
             }
 
             if(variable_location[2] == 1){
-                cudaCheck(cudaMemcpy(unc_pos, dev_unc_pos, size_double3, cudaMemcpyDeviceToHost));
+                cudaCheck(cudaMemcpy(unc_pos, dev_unc_pos, size_float3, cudaMemcpyDeviceToHost));
 
                 variable_location[2] = 0;
             }
 
             if(variable_location[10] == 1){
-                cudaCheck(cudaMemcpy(pdb_dist, dev_pdb_dist, size_double, cudaMemcpyDeviceToHost));
+                cudaCheck(cudaMemcpy(pdb_dist, dev_pdb_dist, size_float, cudaMemcpyDeviceToHost));
 
                 variable_location[10] = 0;
             }
@@ -1000,8 +1000,8 @@ void device_to_host(int op){
         case 4:
             N = nang+1;
             size_int = N*sizeof(int);
-            size_double = N*sizeof(double);
-            size_double3 = (nbead+1)*sizeof(double3);
+            size_float = N*sizeof(float);
+            size_float3 = (nbead+1)*sizeof(float3);
 
             if(variable_location[11] == 1){
                 cudaCheck(cudaMemcpy(ibead_ang, dev_ibead_ang, size_int, cudaMemcpyDeviceToHost));
@@ -1011,7 +1011,7 @@ void device_to_host(int op){
             }
 
             if(variable_location[2] == 1){
-                cudaCheck(cudaMemcpy(unc_pos, dev_unc_pos, size_double3, cudaMemcpyDeviceToHost));
+                cudaCheck(cudaMemcpy(unc_pos, dev_unc_pos, size_float3, cudaMemcpyDeviceToHost));
 
                 variable_location[2] = 0;
             }
@@ -1022,8 +1022,8 @@ void device_to_host(int op){
         case 5:
             N = nil_att+1;
             size_int = N*sizeof(int);
-            size_double = N*sizeof(double);
-            size_double3 = (nbead+1)*sizeof(double3);
+            size_float = N*sizeof(float);
+            size_float3 = (nbead+1)*sizeof(float3);
 
             // Native
             if(variable_location[7] == 1){
@@ -1031,30 +1031,30 @@ void device_to_host(int op){
                 cudaCheck(cudaMemcpy(jbead_pair_list_att, dev_jbead_pair_list_att, size_int, cudaMemcpyDeviceToHost));
                 cudaCheck(cudaMemcpy(itype_pair_list_att, dev_itype_pair_list_att, size_int, cudaMemcpyDeviceToHost));
                 cudaCheck(cudaMemcpy(jtype_pair_list_att, dev_jtype_pair_list_att, size_int, cudaMemcpyDeviceToHost));
-                cudaCheck(cudaMemcpy(pl_lj_nat_pdb_dist, dev_pl_lj_nat_pdb_dist, size_double, cudaMemcpyDeviceToHost));
-                cudaCheck(cudaMemcpy(pl_lj_nat_pdb_dist2, dev_pl_lj_nat_pdb_dist2, size_double, cudaMemcpyDeviceToHost));
-                cudaCheck(cudaMemcpy(pl_lj_nat_pdb_dist6, dev_pl_lj_nat_pdb_dist6, size_double, cudaMemcpyDeviceToHost));
-                cudaCheck(cudaMemcpy(pl_lj_nat_pdb_dist12, dev_pl_lj_nat_pdb_dist12, size_double, cudaMemcpyDeviceToHost));
+                cudaCheck(cudaMemcpy(pl_lj_nat_pdb_dist, dev_pl_lj_nat_pdb_dist, size_float, cudaMemcpyDeviceToHost));
+                cudaCheck(cudaMemcpy(pl_lj_nat_pdb_dist2, dev_pl_lj_nat_pdb_dist2, size_float, cudaMemcpyDeviceToHost));
+                cudaCheck(cudaMemcpy(pl_lj_nat_pdb_dist6, dev_pl_lj_nat_pdb_dist6, size_float, cudaMemcpyDeviceToHost));
+                cudaCheck(cudaMemcpy(pl_lj_nat_pdb_dist12, dev_pl_lj_nat_pdb_dist12, size_float, cudaMemcpyDeviceToHost));
 
                 variable_location[7] = 0;
             }
 
             if(variable_location[2] == 1){
-                cudaCheck(cudaMemcpy(unc_pos, dev_unc_pos, size_double3, cudaMemcpyDeviceToHost));
+                cudaCheck(cudaMemcpy(unc_pos, dev_unc_pos, size_float3, cudaMemcpyDeviceToHost));
 
                 variable_location[2] = 0;
             }
 
             if(variable_location[12] == 1){
-                cudaCheck(cudaMemcpy(force, dev_force, size_double3, cudaMemcpyDeviceToHost));
+                cudaCheck(cudaMemcpy(force, dev_force, size_float3, cudaMemcpyDeviceToHost));
 
                 variable_location[12] = 0;
             }
 
             N = nil_rep+1;
             size_int = N*sizeof(int);
-            size_double = N*sizeof(double);
-            size_double3 = (nbead+1)*sizeof(double3);
+            size_float = N*sizeof(float);
+            size_float3 = (nbead+1)*sizeof(float3);
 
             // Non-Native
             if(variable_location[8] == 1){
@@ -1067,13 +1067,13 @@ void device_to_host(int op){
             }
 
             if(variable_location[2] == 1){
-                cudaCheck(cudaMemcpy(unc_pos, dev_unc_pos, size_double3, cudaMemcpyDeviceToHost));
+                cudaCheck(cudaMemcpy(unc_pos, dev_unc_pos, size_float3, cudaMemcpyDeviceToHost));
 
                 variable_location[2] = 0;
             }
 
             if(variable_location[12] == 1){
-                cudaCheck(cudaMemcpy(force, dev_force, size_double3, cudaMemcpyDeviceToHost));
+                cudaCheck(cudaMemcpy(force, dev_force, size_float3, cudaMemcpyDeviceToHost));
 
                 variable_location[12] = 0;
             }
@@ -1084,8 +1084,8 @@ void device_to_host(int op){
         case 6:
             N = nbnd+1;
             size_int = N*sizeof(int);
-            size_double = N*sizeof(double);
-            size_double3 = (nbead+1)*sizeof(double3);
+            size_float = N*sizeof(float);
+            size_float3 = (nbead+1)*sizeof(float3);
 
             if(variable_location[9] == 1){
                 cudaCheck(cudaMemcpy(ibead_bnd, dev_ibead_bnd, size_int, cudaMemcpyDeviceToHost));
@@ -1095,7 +1095,7 @@ void device_to_host(int op){
             }
             
             if(variable_location[10] == 1){
-                cudaCheck(cudaMemcpy(pdb_dist, dev_pdb_dist, size_double, cudaMemcpyDeviceToHost));
+                cudaCheck(cudaMemcpy(pdb_dist, dev_pdb_dist, size_float, cudaMemcpyDeviceToHost));
 
                 variable_location[10] = 0;
             }
@@ -1108,13 +1108,13 @@ void device_to_host(int op){
             }
             
             if(variable_location[2] == 1){
-                cudaCheck(cudaMemcpy(unc_pos, dev_unc_pos, size_double3, cudaMemcpyDeviceToHost));
+                cudaCheck(cudaMemcpy(unc_pos, dev_unc_pos, size_float3, cudaMemcpyDeviceToHost));
 
                 variable_location[2] = 0;
             }
 
             if(variable_location[12] == 1){
-                cudaCheck(cudaMemcpy(force, dev_force, size_double3, cudaMemcpyDeviceToHost));
+                cudaCheck(cudaMemcpy(force, dev_force, size_float3, cudaMemcpyDeviceToHost));
 
                 variable_location[12] = 0;
             }
@@ -1126,8 +1126,8 @@ void device_to_host(int op){
         case 7:
             N = nang+1;
             size_int = N*sizeof(int);
-            size_double = N*sizeof(double);
-            size_double3 = (nbead+1)*sizeof(double3);
+            size_float = N*sizeof(float);
+            size_float3 = (nbead+1)*sizeof(float3);
 
             if(variable_location[11] == 1){
                 cudaCheck(cudaMemcpy(ibead_ang, dev_ibead_ang, size_int, cudaMemcpyDeviceToHost));
@@ -1137,13 +1137,13 @@ void device_to_host(int op){
             }
 
             if(variable_location[2] == 1){
-                cudaCheck(cudaMemcpy(unc_pos, dev_unc_pos, size_double3, cudaMemcpyDeviceToHost));
+                cudaCheck(cudaMemcpy(unc_pos, dev_unc_pos, size_float3, cudaMemcpyDeviceToHost));
 
                 variable_location[2] = 0;
             }
 
             if(variable_location[12] == 1){
-                cudaCheck(cudaMemcpy(force, dev_force, size_double3, cudaMemcpyDeviceToHost));
+                cudaCheck(cudaMemcpy(force, dev_force, size_float3, cudaMemcpyDeviceToHost));
 
                 variable_location[12] = 0;
             }
@@ -1152,10 +1152,10 @@ void device_to_host(int op){
 
         // Random Forces
         case 8:
-            size_double3 = (nbead+1)*sizeof(double3);
+            size_float3 = (nbead+1)*sizeof(float3);
 
             if(variable_location[12] == 1){
-                cudaCheck(cudaMemcpy(force, dev_force, size_double3, cudaMemcpyDeviceToHost));
+                cudaCheck(cudaMemcpy(force, dev_force, size_float3, cudaMemcpyDeviceToHost));
 
                 variable_location[12] = 0;
             }
@@ -1166,35 +1166,35 @@ void device_to_host(int op){
         case 9:
             N = nbead+1;
             size_int = N*sizeof(int);
-            size_double = N*sizeof(double);
-            size_double3 = (nbead+1)*sizeof(double3);
+            size_float = N*sizeof(float);
+            size_float3 = (nbead+1)*sizeof(float3);
 
             if(variable_location[2] == 1){
-                cudaCheck(cudaMemcpy(unc_pos, dev_unc_pos, size_double3, cudaMemcpyDeviceToHost));
+                cudaCheck(cudaMemcpy(unc_pos, dev_unc_pos, size_float3, cudaMemcpyDeviceToHost));
 
                 variable_location[2] = 0;
             }
 
             if(variable_location[12] == 1){
-                cudaCheck(cudaMemcpy(force, dev_force, size_double3, cudaMemcpyDeviceToHost));
+                cudaCheck(cudaMemcpy(force, dev_force, size_float3, cudaMemcpyDeviceToHost));
 
                 variable_location[12] = 0;
             }
 
             if(variable_location[13] == 1){
-                cudaCheck(cudaMemcpy(incr, dev_incr, size_double3, cudaMemcpyDeviceToHost));
+                cudaCheck(cudaMemcpy(incr, dev_incr, size_float3, cudaMemcpyDeviceToHost));
 
                 variable_location[13] = 0;
             }
 
             if(variable_location[14] == 1){
-                cudaCheck(cudaMemcpy(vel, dev_vel, size_double3, cudaMemcpyDeviceToHost));
+                cudaCheck(cudaMemcpy(vel, dev_vel, size_float3, cudaMemcpyDeviceToHost));
 
                 variable_location[14] = 0;
             }
 
             if(variable_location[15] == 1){
-                cudaCheck(cudaMemcpy(pos, dev_pos, size_double3, cudaMemcpyDeviceToHost));
+                cudaCheck(cudaMemcpy(pos, dev_pos, size_float3, cudaMemcpyDeviceToHost));
 
                 variable_location[15] = 0;
             }
@@ -1205,23 +1205,23 @@ void device_to_host(int op){
         case 10:
             N = nbead+1;
             size_int = N*sizeof(int);
-            size_double = N*sizeof(double);
-            size_double3 = (nbead+1)*sizeof(double3);
+            size_float = N*sizeof(float);
+            size_float3 = (nbead+1)*sizeof(float3);
 
             if(variable_location[12] == 1){
-                cudaCheck(cudaMemcpy(force, dev_force, size_double3, cudaMemcpyDeviceToHost));
+                cudaCheck(cudaMemcpy(force, dev_force, size_float3, cudaMemcpyDeviceToHost));
 
                 variable_location[12] = 0;
             }
 
             if(variable_location[13] == 1){
-                cudaCheck(cudaMemcpy(incr, dev_incr, size_double3, cudaMemcpyDeviceToHost));
+                cudaCheck(cudaMemcpy(incr, dev_incr, size_float3, cudaMemcpyDeviceToHost));
 
                 variable_location[13] = 0;
             }
 
             if(variable_location[14] == 1){
-                cudaCheck(cudaMemcpy(vel, dev_vel, size_double3, cudaMemcpyDeviceToHost));
+                cudaCheck(cudaMemcpy(vel, dev_vel, size_float3, cudaMemcpyDeviceToHost));
 
                 variable_location[14] = 0;
             }
@@ -1259,8 +1259,8 @@ void device_to_host(int op){
 void device_to_host_copy(int op){
     int N;
     int size_int;
-	int size_double;
-	int size_double3;
+	int size_float;
+	int size_float3;
 
     if(debug){
         printf("%*d: ", 2, op);
@@ -1275,8 +1275,8 @@ void device_to_host_copy(int op){
         case 0:
             N = ncon_att+1;
             size_int = N*sizeof(int);
-            size_double = N*sizeof(double);
-            size_double3 = (nbead+1)*sizeof(double3);
+            size_float = N*sizeof(float);
+            size_float3 = (nbead+1)*sizeof(float3);
 
             // Native
             if(variable_location[0] == 1){
@@ -1284,30 +1284,30 @@ void device_to_host_copy(int op){
                 cudaCheck(cudaMemcpy(jbead_lj_nat, dev_jbead_lj_nat, size_int, cudaMemcpyDeviceToHost));
                 cudaCheck(cudaMemcpy(itype_lj_nat, dev_itype_lj_nat, size_int, cudaMemcpyDeviceToHost));
                 cudaCheck(cudaMemcpy(jtype_lj_nat, dev_jtype_lj_nat, size_int, cudaMemcpyDeviceToHost));
-                cudaCheck(cudaMemcpy(lj_nat_pdb_dist, dev_lj_nat_pdb_dist, size_double, cudaMemcpyDeviceToHost));
-                cudaCheck(cudaMemcpy(lj_nat_pdb_dist2, dev_lj_nat_pdb_dist2, size_double, cudaMemcpyDeviceToHost));
-                cudaCheck(cudaMemcpy(lj_nat_pdb_dist6, dev_lj_nat_pdb_dist6, size_double, cudaMemcpyDeviceToHost));
-                cudaCheck(cudaMemcpy(lj_nat_pdb_dist12, dev_lj_nat_pdb_dist12, size_double, cudaMemcpyDeviceToHost));
+                cudaCheck(cudaMemcpy(lj_nat_pdb_dist, dev_lj_nat_pdb_dist, size_float, cudaMemcpyDeviceToHost));
+                cudaCheck(cudaMemcpy(lj_nat_pdb_dist2, dev_lj_nat_pdb_dist2, size_float, cudaMemcpyDeviceToHost));
+                cudaCheck(cudaMemcpy(lj_nat_pdb_dist6, dev_lj_nat_pdb_dist6, size_float, cudaMemcpyDeviceToHost));
+                cudaCheck(cudaMemcpy(lj_nat_pdb_dist12, dev_lj_nat_pdb_dist12, size_float, cudaMemcpyDeviceToHost));
 
                 variable_location[0] = 0;
             }
 
             if(variable_location[1] == 1){
-                cudaCheck(cudaMemcpy(lj_nat_pdb_dist, dev_lj_nat_pdb_dist, size_double, cudaMemcpyDeviceToHost));
+                cudaCheck(cudaMemcpy(lj_nat_pdb_dist, dev_lj_nat_pdb_dist, size_float, cudaMemcpyDeviceToHost));
                 
                 variable_location[1] = 0;
             }
 
             if(variable_location[2] == 1){
-                cudaCheck(cudaMemcpy(unc_pos, dev_unc_pos, size_double3, cudaMemcpyDeviceToHost));
+                cudaCheck(cudaMemcpy(unc_pos, dev_unc_pos, size_float3, cudaMemcpyDeviceToHost));
 
                 variable_location[2] = 0;
             }
 
             N = ncon_rep+1;
             size_int = N*sizeof(int);
-            size_double = N*sizeof(double);
-            size_double3 = (nbead+1)*sizeof(double3);
+            size_float = N*sizeof(float);
+            size_float3 = (nbead+1)*sizeof(float3);
 
             // Non-Native
             if(variable_location[3] == 1){
@@ -1320,7 +1320,7 @@ void device_to_host_copy(int op){
             }
 
             if(variable_location[2] == 1){
-                cudaCheck(cudaMemcpy(unc_pos, dev_unc_pos, size_double3, cudaMemcpyDeviceToHost));
+                cudaCheck(cudaMemcpy(unc_pos, dev_unc_pos, size_float3, cudaMemcpyDeviceToHost));
 
                 variable_location[2] = 0;
             }
@@ -1331,8 +1331,8 @@ void device_to_host_copy(int op){
         case 1:
             N = nnl_att+1;
             size_int = N*sizeof(int);
-            size_double = N*sizeof(double);
-            size_double3 = (nbead+1)*sizeof(double3);
+            size_float = N*sizeof(float);
+            size_float3 = (nbead+1)*sizeof(float3);
 
             // Native
             if(variable_location[4] == 1){
@@ -1345,24 +1345,24 @@ void device_to_host_copy(int op){
             }
 
             if(variable_location[2] == 1){
-                cudaCheck(cudaMemcpy(unc_pos, dev_unc_pos, size_double3, cudaMemcpyDeviceToHost));
+                cudaCheck(cudaMemcpy(unc_pos, dev_unc_pos, size_float3, cudaMemcpyDeviceToHost));
 
                 variable_location[2] = 0;
             }
 
             if(variable_location[5] == 1){
-                cudaCheck(cudaMemcpy(nl_lj_nat_pdb_dist, dev_nl_lj_nat_pdb_dist, size_double, cudaMemcpyDeviceToHost));
-                cudaCheck(cudaMemcpy(nl_lj_nat_pdb_dist2, dev_nl_lj_nat_pdb_dist2, size_double, cudaMemcpyDeviceToHost));
-                cudaCheck(cudaMemcpy(nl_lj_nat_pdb_dist6, dev_nl_lj_nat_pdb_dist6, size_double, cudaMemcpyDeviceToHost));
-                cudaCheck(cudaMemcpy(nl_lj_nat_pdb_dist12, dev_nl_lj_nat_pdb_dist12, size_double, cudaMemcpyDeviceToHost));
+                cudaCheck(cudaMemcpy(nl_lj_nat_pdb_dist, dev_nl_lj_nat_pdb_dist, size_float, cudaMemcpyDeviceToHost));
+                cudaCheck(cudaMemcpy(nl_lj_nat_pdb_dist2, dev_nl_lj_nat_pdb_dist2, size_float, cudaMemcpyDeviceToHost));
+                cudaCheck(cudaMemcpy(nl_lj_nat_pdb_dist6, dev_nl_lj_nat_pdb_dist6, size_float, cudaMemcpyDeviceToHost));
+                cudaCheck(cudaMemcpy(nl_lj_nat_pdb_dist12, dev_nl_lj_nat_pdb_dist12, size_float, cudaMemcpyDeviceToHost));
 
                 variable_location[5] = 0;
             }
 
             N = nnl_rep+1;
             size_int = N*sizeof(int);
-            size_double = N*sizeof(double);
-            size_double3 = (nbead+1)*sizeof(double3);
+            size_float = N*sizeof(float);
+            size_float3 = (nbead+1)*sizeof(float3);
 
             // Non-Native
             if(variable_location[6] == 1){
@@ -1375,7 +1375,7 @@ void device_to_host_copy(int op){
             }
 
             if(variable_location[2] == 1){
-                cudaCheck(cudaMemcpy(unc_pos, dev_unc_pos, size_double3, cudaMemcpyDeviceToHost));
+                cudaCheck(cudaMemcpy(unc_pos, dev_unc_pos, size_float3, cudaMemcpyDeviceToHost));
 
                 variable_location[2] = 0;
             }
@@ -1386,8 +1386,8 @@ void device_to_host_copy(int op){
         case 2:
             N = nil_att+1;
             size_int = N*sizeof(int);
-            size_double = N*sizeof(double);
-            size_double3 = (nbead+1)*sizeof(double3);
+            size_float = N*sizeof(float);
+            size_float3 = (nbead+1)*sizeof(float3);
 
             // Native
             if(variable_location[7] == 1){
@@ -1395,24 +1395,24 @@ void device_to_host_copy(int op){
                 cudaCheck(cudaMemcpy(jbead_pair_list_att, dev_jbead_pair_list_att, size_int, cudaMemcpyDeviceToHost));
                 cudaCheck(cudaMemcpy(itype_pair_list_att, dev_itype_pair_list_att, size_int, cudaMemcpyDeviceToHost));
                 cudaCheck(cudaMemcpy(jtype_pair_list_att, dev_jtype_pair_list_att, size_int, cudaMemcpyDeviceToHost));
-                cudaCheck(cudaMemcpy(pl_lj_nat_pdb_dist, dev_pl_lj_nat_pdb_dist, size_double, cudaMemcpyDeviceToHost));
-                cudaCheck(cudaMemcpy(pl_lj_nat_pdb_dist2, dev_pl_lj_nat_pdb_dist2, size_double, cudaMemcpyDeviceToHost));
-                cudaCheck(cudaMemcpy(pl_lj_nat_pdb_dist6, dev_pl_lj_nat_pdb_dist6, size_double, cudaMemcpyDeviceToHost));
-                cudaCheck(cudaMemcpy(pl_lj_nat_pdb_dist12, dev_pl_lj_nat_pdb_dist12, size_double, cudaMemcpyDeviceToHost));
+                cudaCheck(cudaMemcpy(pl_lj_nat_pdb_dist, dev_pl_lj_nat_pdb_dist, size_float, cudaMemcpyDeviceToHost));
+                cudaCheck(cudaMemcpy(pl_lj_nat_pdb_dist2, dev_pl_lj_nat_pdb_dist2, size_float, cudaMemcpyDeviceToHost));
+                cudaCheck(cudaMemcpy(pl_lj_nat_pdb_dist6, dev_pl_lj_nat_pdb_dist6, size_float, cudaMemcpyDeviceToHost));
+                cudaCheck(cudaMemcpy(pl_lj_nat_pdb_dist12, dev_pl_lj_nat_pdb_dist12, size_float, cudaMemcpyDeviceToHost));
 
                 variable_location[7] = 0;
             }
             
             if(variable_location[2] == 1){
-                cudaCheck(cudaMemcpy(unc_pos, dev_unc_pos, size_double3, cudaMemcpyDeviceToHost));
+                cudaCheck(cudaMemcpy(unc_pos, dev_unc_pos, size_float3, cudaMemcpyDeviceToHost));
 
                 variable_location[2] = 0;
             }
 
             N = nil_rep+1;
             size_int = N*sizeof(int);
-            size_double = N*sizeof(double);
-            size_double3 = (nbead+1)*sizeof(double3);
+            size_float = N*sizeof(float);
+            size_float3 = (nbead+1)*sizeof(float3);
 
             // Non-Native
             if(variable_location[8] == 1){
@@ -1425,7 +1425,7 @@ void device_to_host_copy(int op){
             }
 
             if(variable_location[2] == 1){
-                cudaCheck(cudaMemcpy(unc_pos, dev_unc_pos, size_double3, cudaMemcpyDeviceToHost));
+                cudaCheck(cudaMemcpy(unc_pos, dev_unc_pos, size_float3, cudaMemcpyDeviceToHost));
 
                 variable_location[2] = 0;
             }
@@ -1436,8 +1436,8 @@ void device_to_host_copy(int op){
         case 3:
             N = nbnd+1;
             size_int = N*sizeof(int);
-            size_double = N*sizeof(double);
-            size_double3 = (nbead+1)*sizeof(double3);
+            size_float = N*sizeof(float);
+            size_float3 = (nbead+1)*sizeof(float3);
 
             if(variable_location[9] == 1){
                 cudaCheck(cudaMemcpy(ibead_bnd, dev_ibead_bnd, size_int, cudaMemcpyDeviceToHost));
@@ -1447,13 +1447,13 @@ void device_to_host_copy(int op){
             }
 
             if(variable_location[2] == 1){
-                cudaCheck(cudaMemcpy(unc_pos, dev_unc_pos, size_double3, cudaMemcpyDeviceToHost));
+                cudaCheck(cudaMemcpy(unc_pos, dev_unc_pos, size_float3, cudaMemcpyDeviceToHost));
 
                 variable_location[2] = 0;
             }
 
             if(variable_location[10] == 1){
-                cudaCheck(cudaMemcpy(pdb_dist, dev_pdb_dist, size_double, cudaMemcpyDeviceToHost));
+                cudaCheck(cudaMemcpy(pdb_dist, dev_pdb_dist, size_float, cudaMemcpyDeviceToHost));
 
                 variable_location[10] = 0;
             }
@@ -1464,8 +1464,8 @@ void device_to_host_copy(int op){
         case 4:
             N = nang+1;
             size_int = N*sizeof(int);
-            size_double = N*sizeof(double);
-            size_double3 = (nbead+1)*sizeof(double3);
+            size_float = N*sizeof(float);
+            size_float3 = (nbead+1)*sizeof(float3);
 
             if(variable_location[11] == 1){
                 cudaCheck(cudaMemcpy(ibead_ang, dev_ibead_ang, size_int, cudaMemcpyDeviceToHost));
@@ -1475,7 +1475,7 @@ void device_to_host_copy(int op){
             }
 
             if(variable_location[2] == 1){
-                cudaCheck(cudaMemcpy(unc_pos, dev_unc_pos, size_double3, cudaMemcpyDeviceToHost));
+                cudaCheck(cudaMemcpy(unc_pos, dev_unc_pos, size_float3, cudaMemcpyDeviceToHost));
 
                 variable_location[2] = 0;
             }
@@ -1486,8 +1486,8 @@ void device_to_host_copy(int op){
         case 5:
             N = nil_att+1;
             size_int = N*sizeof(int);
-            size_double = N*sizeof(double);
-            size_double3 = (nbead+1)*sizeof(double3);
+            size_float = N*sizeof(float);
+            size_float3 = (nbead+1)*sizeof(float3);
 
             // Native
             if(variable_location[7] == 1){
@@ -1495,30 +1495,30 @@ void device_to_host_copy(int op){
                 cudaCheck(cudaMemcpy(jbead_pair_list_att, dev_jbead_pair_list_att, size_int, cudaMemcpyDeviceToHost));
                 cudaCheck(cudaMemcpy(itype_pair_list_att, dev_itype_pair_list_att, size_int, cudaMemcpyDeviceToHost));
                 cudaCheck(cudaMemcpy(jtype_pair_list_att, dev_jtype_pair_list_att, size_int, cudaMemcpyDeviceToHost));
-                cudaCheck(cudaMemcpy(pl_lj_nat_pdb_dist, dev_pl_lj_nat_pdb_dist, size_double, cudaMemcpyDeviceToHost));
-                cudaCheck(cudaMemcpy(pl_lj_nat_pdb_dist2, dev_pl_lj_nat_pdb_dist2, size_double, cudaMemcpyDeviceToHost));
-                cudaCheck(cudaMemcpy(pl_lj_nat_pdb_dist6, dev_pl_lj_nat_pdb_dist6, size_double, cudaMemcpyDeviceToHost));
-                cudaCheck(cudaMemcpy(pl_lj_nat_pdb_dist12, dev_pl_lj_nat_pdb_dist12, size_double, cudaMemcpyDeviceToHost));
+                cudaCheck(cudaMemcpy(pl_lj_nat_pdb_dist, dev_pl_lj_nat_pdb_dist, size_float, cudaMemcpyDeviceToHost));
+                cudaCheck(cudaMemcpy(pl_lj_nat_pdb_dist2, dev_pl_lj_nat_pdb_dist2, size_float, cudaMemcpyDeviceToHost));
+                cudaCheck(cudaMemcpy(pl_lj_nat_pdb_dist6, dev_pl_lj_nat_pdb_dist6, size_float, cudaMemcpyDeviceToHost));
+                cudaCheck(cudaMemcpy(pl_lj_nat_pdb_dist12, dev_pl_lj_nat_pdb_dist12, size_float, cudaMemcpyDeviceToHost));
 
                 variable_location[7] = 0;
             }
 
             if(variable_location[2] == 1){
-                cudaCheck(cudaMemcpy(unc_pos, dev_unc_pos, size_double3, cudaMemcpyDeviceToHost));
+                cudaCheck(cudaMemcpy(unc_pos, dev_unc_pos, size_float3, cudaMemcpyDeviceToHost));
 
                 variable_location[2] = 0;
             }
 
             if(variable_location[12] == 1){
-                cudaCheck(cudaMemcpy(force, dev_force, size_double3, cudaMemcpyDeviceToHost));
+                cudaCheck(cudaMemcpy(force, dev_force, size_float3, cudaMemcpyDeviceToHost));
 
                 variable_location[12] = 0;
             }
 
             N = nil_rep+1;
             size_int = N*sizeof(int);
-            size_double = N*sizeof(double);
-            size_double3 = (nbead+1)*sizeof(double3);
+            size_float = N*sizeof(float);
+            size_float3 = (nbead+1)*sizeof(float3);
 
             // Non-Native
             if(variable_location[8] == 1){
@@ -1531,13 +1531,13 @@ void device_to_host_copy(int op){
             }
 
             if(variable_location[2] == 1){
-                cudaCheck(cudaMemcpy(unc_pos, dev_unc_pos, size_double3, cudaMemcpyDeviceToHost));
+                cudaCheck(cudaMemcpy(unc_pos, dev_unc_pos, size_float3, cudaMemcpyDeviceToHost));
 
                 variable_location[2] = 0;
             }
 
             if(variable_location[12] == 1){
-                cudaCheck(cudaMemcpy(force, dev_force, size_double3, cudaMemcpyDeviceToHost));
+                cudaCheck(cudaMemcpy(force, dev_force, size_float3, cudaMemcpyDeviceToHost));
 
                 variable_location[12] = 0;
             }
@@ -1548,8 +1548,8 @@ void device_to_host_copy(int op){
         case 6:
             N = nbnd+1;
             size_int = N*sizeof(int);
-            size_double = N*sizeof(double);
-            size_double3 = (nbead+1)*sizeof(double3);
+            size_float = N*sizeof(float);
+            size_float3 = (nbead+1)*sizeof(float3);
 
             if(variable_location[9] == 1){
                 cudaCheck(cudaMemcpy(ibead_bnd, dev_ibead_bnd, size_int, cudaMemcpyDeviceToHost));
@@ -1559,7 +1559,7 @@ void device_to_host_copy(int op){
             }
             
             if(variable_location[10] == 1){
-                cudaCheck(cudaMemcpy(pdb_dist, dev_pdb_dist, size_double, cudaMemcpyDeviceToHost));
+                cudaCheck(cudaMemcpy(pdb_dist, dev_pdb_dist, size_float, cudaMemcpyDeviceToHost));
 
                 variable_location[10] = 0;
             }
@@ -1572,13 +1572,13 @@ void device_to_host_copy(int op){
             }
             
             if(variable_location[2] == 1){
-                cudaCheck(cudaMemcpy(unc_pos, dev_unc_pos, size_double3, cudaMemcpyDeviceToHost));
+                cudaCheck(cudaMemcpy(unc_pos, dev_unc_pos, size_float3, cudaMemcpyDeviceToHost));
 
                 variable_location[2] = 0;
             }
 
             if(variable_location[12] == 1){
-                cudaCheck(cudaMemcpy(force, dev_force, size_double3, cudaMemcpyDeviceToHost));
+                cudaCheck(cudaMemcpy(force, dev_force, size_float3, cudaMemcpyDeviceToHost));
 
                 variable_location[12] = 0;
             }
@@ -1590,8 +1590,8 @@ void device_to_host_copy(int op){
         case 7:
             N = nang+1;
             size_int = N*sizeof(int);
-            size_double = N*sizeof(double);
-            size_double3 = (nbead+1)*sizeof(double3);
+            size_float = N*sizeof(float);
+            size_float3 = (nbead+1)*sizeof(float3);
 
             if(variable_location[11] == 1){
                 cudaCheck(cudaMemcpy(ibead_ang, dev_ibead_ang, size_int, cudaMemcpyDeviceToHost));
@@ -1601,13 +1601,13 @@ void device_to_host_copy(int op){
             }
 
             if(variable_location[2] == 1){
-                cudaCheck(cudaMemcpy(unc_pos, dev_unc_pos, size_double3, cudaMemcpyDeviceToHost));
+                cudaCheck(cudaMemcpy(unc_pos, dev_unc_pos, size_float3, cudaMemcpyDeviceToHost));
 
                 variable_location[2] = 0;
             }
 
             if(variable_location[12] == 1){
-                cudaCheck(cudaMemcpy(force, dev_force, size_double3, cudaMemcpyDeviceToHost));
+                cudaCheck(cudaMemcpy(force, dev_force, size_float3, cudaMemcpyDeviceToHost));
 
                 variable_location[12] = 0;
             }
@@ -1617,7 +1617,7 @@ void device_to_host_copy(int op){
         // Random Forces
         case 8:
             if(variable_location[12] == 1){
-                cudaCheck(cudaMemcpy(force, dev_force, size_double3, cudaMemcpyDeviceToHost));
+                cudaCheck(cudaMemcpy(force, dev_force, size_float3, cudaMemcpyDeviceToHost));
 
                 variable_location[12] = 0;
             }
@@ -1628,35 +1628,35 @@ void device_to_host_copy(int op){
         case 9:
             N = nbead+1;
             size_int = N*sizeof(int);
-            size_double = N*sizeof(double);
-            size_double3 = (nbead+1)*sizeof(double3);
+            size_float = N*sizeof(float);
+            size_float3 = (nbead+1)*sizeof(float3);
 
             if(variable_location[2] == 1){
-                cudaCheck(cudaMemcpy(unc_pos, dev_unc_pos, size_double3, cudaMemcpyDeviceToHost));
+                cudaCheck(cudaMemcpy(unc_pos, dev_unc_pos, size_float3, cudaMemcpyDeviceToHost));
 
                 variable_location[2] = 0;
             }
 
             if(variable_location[12] == 1){
-                cudaCheck(cudaMemcpy(force, dev_force, size_double3, cudaMemcpyDeviceToHost));
+                cudaCheck(cudaMemcpy(force, dev_force, size_float3, cudaMemcpyDeviceToHost));
 
                 variable_location[12] = 0;
             }
 
             if(variable_location[13] == 1){
-                cudaCheck(cudaMemcpy(incr, dev_incr, size_double3, cudaMemcpyDeviceToHost));
+                cudaCheck(cudaMemcpy(incr, dev_incr, size_float3, cudaMemcpyDeviceToHost));
 
                 variable_location[13] = 0;
             }
 
             if(variable_location[14] == 1){
-                cudaCheck(cudaMemcpy(vel, dev_vel, size_double3, cudaMemcpyDeviceToHost));
+                cudaCheck(cudaMemcpy(vel, dev_vel, size_float3, cudaMemcpyDeviceToHost));
 
                 variable_location[14] = 0;
             }
 
             if(variable_location[15] == 1){
-                cudaCheck(cudaMemcpy(pos, dev_pos, size_double3, cudaMemcpyDeviceToHost));
+                cudaCheck(cudaMemcpy(pos, dev_pos, size_float3, cudaMemcpyDeviceToHost));
 
                 variable_location[15] = 0;
             }
@@ -1667,23 +1667,23 @@ void device_to_host_copy(int op){
         case 10:
             N = nbead+1;
             size_int = N*sizeof(int);
-            size_double = N*sizeof(double);
-            size_double3 = (nbead+1)*sizeof(double3);
+            size_float = N*sizeof(float);
+            size_float3 = (nbead+1)*sizeof(float3);
 
             if(variable_location[12] == 1){
-                cudaCheck(cudaMemcpy(force, dev_force, size_double3, cudaMemcpyDeviceToHost));
+                cudaCheck(cudaMemcpy(force, dev_force, size_float3, cudaMemcpyDeviceToHost));
 
                 variable_location[12] = 0;
             }
 
             if(variable_location[13] == 1){
-                cudaCheck(cudaMemcpy(incr, dev_incr, size_double3, cudaMemcpyDeviceToHost));
+                cudaCheck(cudaMemcpy(incr, dev_incr, size_float3, cudaMemcpyDeviceToHost));
 
                 variable_location[13] = 0;
             }
 
             if(variable_location[14] == 1){
-                cudaCheck(cudaMemcpy(vel, dev_vel, size_double3, cudaMemcpyDeviceToHost));
+                cudaCheck(cudaMemcpy(vel, dev_vel, size_float3, cudaMemcpyDeviceToHost));
 
                 variable_location[14] = 0;
             }
@@ -1732,8 +1732,8 @@ void host_collect(){
 void print_op(int op, int val){
     int N;
     int size_int;
-	int size_double;
-	int size_double3;
+	int size_float;
+	int size_float3;
 
     char *direction;
 

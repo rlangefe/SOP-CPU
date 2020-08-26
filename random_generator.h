@@ -9,8 +9,8 @@ class Ran_Gen {
   void restart();
   void set_fname(char*);
   void set_seed(int);
-  double gasdev();
-  double ran2();
+  float gasdev();
+  float ran2();
  private:
   static const int IM1 = 2147483563;
   static const int IM2 = 2147483399;
@@ -26,13 +26,13 @@ class Ran_Gen {
   char fname[2048];
   int mseed;
   int iset;
-  double gset;
+  float gset;
   int idum2;
   int iy;
   int* iv;
 };
-const double Ran_Gen_EPS = 3.0e-16;
-const double Ran_Gen_RNMX = 1.0-Ran_Gen_EPS;
-const double Ran_Gen_AM=1.0/double(2147483563);
+const float Ran_Gen_EPS = 3.0e-16;
+const float Ran_Gen_RNMX = 1.0-Ran_Gen_EPS;
+const float Ran_Gen_AM=1.0/float(2147483563);
 
 #endif

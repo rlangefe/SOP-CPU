@@ -16,10 +16,10 @@ void compact_native_pl_CL();
 void compact_non_native_pl_CL();
 
 void calculate_array_native_pl(int boxl, int N);
-__global__ void array_native_pl_kernel(int *dev_ibead_neighbor_list_att, int *dev_jbead_neighbor_list_att, int *dev_itype_neighbor_list_att, int *dev_jtype_neighbor_list_att, double3 *dev_unc_pos, double *dev_nl_lj_nat_pdb_dist, int *dev_value, int boxl, int N);
+__global__ void array_native_pl_kernel(int *dev_ibead_neighbor_list_att, int *dev_jbead_neighbor_list_att, int *dev_itype_neighbor_list_att, int *dev_jtype_neighbor_list_att, float3 *dev_unc_pos, float *dev_nl_lj_nat_pdb_dist, int *dev_value, int boxl, int N);
 
 void calculate_array_non_native_pl(int boxl, int N);
-__global__ void array_non_native_pl_kernel(int *dev_ibead_neighbor_list_rep, int *dev_jbead_neighbor_list_rep, int *dev_itype_neighbor_list_rep, int *dev_jtype_neighbor_list_rep, double3 *dev_unc_pos, int *dev_value, int boxl, int N);
+__global__ void array_non_native_pl_kernel(int *dev_ibead_neighbor_list_rep, int *dev_jbead_neighbor_list_rep, int *dev_itype_neighbor_list_rep, int *dev_jtype_neighbor_list_rep, float3 *dev_unc_pos, int *dev_value, int boxl, int N);
 
 int compact_non_native_pl(int N);
 

@@ -7,26 +7,26 @@ class coord {
  public:
   coord();
   ~coord();
-  double x;
-  double y;
-  double z;
+  float x;
+  float y;
+  float z;
 };
 
 extern int debug;
 
 // Benchmarking
-extern double nl_time;
-extern double pl_time;
-extern double vdw_energy_time;
-extern double vdw_forces_time;
-extern double fene_energy_time;
-extern double fene_forces_time;
-extern double ss_ang_energy_time;
-extern double ss_ang_forces_time;
-extern double update_pos_time;
-extern double update_vel_time;
-extern double clear_forces_time;
-extern double rng_time;
+extern float nl_time;
+extern float pl_time;
+extern float vdw_energy_time;
+extern float vdw_forces_time;
+extern float fene_energy_time;
+extern float fene_forces_time;
+extern float ss_ang_energy_time;
+extern float ss_ang_forces_time;
+extern float update_pos_time;
+extern float update_vel_time;
+extern float clear_forces_time;
+extern float rng_time;
 
 const int mcmd = 100; // maximum number of input commands
 const int mopt = 10; // maximum number of options associated with a command
@@ -47,31 +47,31 @@ extern int prec;
 extern int variable_location[];
 
 // bonded info
-extern double k_bnd;
+extern float k_bnd;
 extern int nbnd;
 extern int* ibead_bnd;
 extern int* jbead_bnd;
-extern double* pdb_dist;
+extern float* pdb_dist;
 extern int bnds_allocated;
-extern double e_bnd;
-extern double e_bnd_coeff;
-extern double R0;
-extern double R0sq;
+extern float e_bnd;
+extern float e_bnd_coeff;
+extern float R0;
+extern float R0sq;
 
 // angular info
 
-extern double k_ang;
+extern float k_ang;
 extern int nang;
 extern int* ibead_ang;
 extern int* jbead_ang;
 extern int* kbead_ang;
-extern double* pdb_ang;
+extern float* pdb_ang;
 extern int angs_allocated;
-extern double e_ang;
-extern double e_ang_coeff;
-extern double e_ang_ss;
-extern double e_ang_ss_coeff;
-extern double f_ang_ss_coeff;
+extern float e_ang;
+extern float e_ang_coeff;
+extern float e_ang_ss;
+extern float e_ang_ss_coeff;
+extern float f_ang_ss_coeff;
 
 // rna-rna vdw info
 
@@ -85,24 +85,24 @@ extern int nnl_rep;
 // pair list
 extern int nil_att;
 extern int nil_rep;
-extern double coeff_att[][3];
-extern double coeff_rep[][3];
-extern double force_coeff_att[][3];
-extern double force_coeff_rep[][3];
-extern double sigma_rep[][3];
-extern double sigma_rep2[][3];
-extern double sigma_rep6[][3];
-extern double sigma_rep12[][3];
+extern float coeff_att[][3];
+extern float coeff_rep[][3];
+extern float force_coeff_att[][3];
+extern float force_coeff_rep[][3];
+extern float sigma_rep[][3];
+extern float sigma_rep2[][3];
+extern float sigma_rep6[][3];
+extern float sigma_rep12[][3];
 
-extern double rcut_nat[][3];
+extern float rcut_nat[][3];
 extern int* ibead_lj_nat;
 extern int* jbead_lj_nat;
 extern int* itype_lj_nat;
 extern int* jtype_lj_nat;
-extern double* lj_nat_pdb_dist;
-extern double* lj_nat_pdb_dist2; // 2nd power of the pdb distance
-extern double* lj_nat_pdb_dist6; // 6th power of the pdb distance
-extern double* lj_nat_pdb_dist12; // 12th power of the pdb distance
+extern float* lj_nat_pdb_dist;
+extern float* lj_nat_pdb_dist2; // 2nd power of the pdb distance
+extern float* lj_nat_pdb_dist6; // 6th power of the pdb distance
+extern float* lj_nat_pdb_dist12; // 12th power of the pdb distance
 extern int* ibead_lj_non_nat;
 extern int* jbead_lj_non_nat;
 extern int* itype_lj_non_nat;
@@ -114,10 +114,10 @@ extern int* jbead_neighbor_list_att;
 extern int* itype_neighbor_list_att;
 extern int* jtype_neighbor_list_att;
 
-extern double* nl_lj_nat_pdb_dist;
-extern double* nl_lj_nat_pdb_dist2;
-extern double* nl_lj_nat_pdb_dist6;
-extern double* nl_lj_nat_pdb_dist12;
+extern float* nl_lj_nat_pdb_dist;
+extern float* nl_lj_nat_pdb_dist2;
+extern float* nl_lj_nat_pdb_dist6;
+extern float* nl_lj_nat_pdb_dist12;
 
 extern int* ibead_neighbor_list_rep;
 extern int* jbead_neighbor_list_rep;
@@ -130,10 +130,10 @@ extern int* jbead_pair_list_att;
 extern int* itype_pair_list_att;
 extern int* jtype_pair_list_att;
 
-extern double* pl_lj_nat_pdb_dist;
-extern double* pl_lj_nat_pdb_dist2;
-extern double* pl_lj_nat_pdb_dist6;
-extern double* pl_lj_nat_pdb_dist12;
+extern float* pl_lj_nat_pdb_dist;
+extern float* pl_lj_nat_pdb_dist2;
+extern float* pl_lj_nat_pdb_dist6;
+extern float* pl_lj_nat_pdb_dist12;
 
 extern int* ibead_pair_list_rep;
 extern int* jbead_pair_list_rep;
@@ -142,20 +142,20 @@ extern int* jtype_pair_list_rep;
 
 extern int lj_rna_rna_allocated;
 extern int* switch_fnb;
-extern double e_vdw_rr;
-extern double e_vdw_rr_att;
-extern double e_vdw_rr_rep;
+extern float e_vdw_rr;
+extern float e_vdw_rr_att;
+extern float e_vdw_rr_rep;
 
 // coordinates and associated params
 
 extern int nbead;
 extern int ncrowder;
 extern int nbead_tot;
-extern double3* pos;
-extern double3* unc_pos;
-extern double3* vel;
-extern double3* force;
-extern double3* natpos; // native position vectors
+extern float3* pos;
+extern float3* unc_pos;
+extern float3* vel;
+extern float3* force;
+extern float3* natpos; // native position vectors
 extern int pos_allocated;
 extern int unc_pos_allocated;
 extern int vel_allocated;
@@ -169,7 +169,7 @@ extern Ran_Gen generator; // the random number generator
 extern int restart; // are we restarting an old simulation?
 extern int rgen_restart; // should we restart the random number generator?
 extern int sim_type; // integration scheme 1 = underdamped; 2 = overdamped
-extern double T; // temperature (kcal/mol)
+extern float T; // temperature (kcal/mol)
 extern int usegpu_nl;
 extern int usegpu_pl;
 extern int usegpu_vdw_energy;
@@ -184,23 +184,23 @@ extern int usegpu_rand_force;
 extern int usegpu_clear_force;
 extern int neighborlist; // neighbor list cutoff method?
 extern int celllist; // cell list cutoff method?
-extern double minT; // minimum temperature determines crowder cutoffs
-extern double boxl; // Length of an edge of the simulation box
-extern double ncell;
-extern double lcell;
-extern double zeta; // friction coefficient
-extern double nstep; // number of steps to take
-extern double istep_restart; // which step to we restart from?
+extern float minT; // minimum temperature determines crowder cutoffs
+extern float boxl; // Length of an edge of the simulation box
+extern float ncell;
+extern float lcell;
+extern float zeta; // friction coefficient
+extern float nstep; // number of steps to take
+extern float istep_restart; // which step to we restart from?
 extern int nup;
 extern int inlup;
 extern int nnlup;
-extern double h; // time step
-extern double halfh;
-extern double a1; // a1,a2,a3,a4 are used for integration
-extern double a2;
-extern double a3;
-extern double a4;
-extern double a5;
+extern float h; // time step
+extern float halfh;
+extern float a1; // a1,a2,a3,a4 are used for integration
+extern float a2;
+extern float a3;
+extern float a4;
+extern float a5;
 extern char ufname[];
 extern char rcfname[];
 extern char cfname[];
@@ -220,8 +220,8 @@ typedef void (*pot_term_Ptr) ();
    each element is for evaluating a
    particular term in the potential */
 extern pot_term_Ptr pot_term[];
-extern double rna_etot;
-extern double system_etot;
+extern float rna_etot;
+extern float system_etot;
 
 /* force stuff */
 extern int nforce_term; // number of force terms
@@ -231,23 +231,23 @@ typedef void (*force_term_Ptr) ();
 extern force_term_Ptr force_term[]; // array of pointers to functions -- each elements is for evaluating a particular type of force
 
 // observables
-extern double chi;
-extern double Q;
+extern float chi;
+extern float Q;
 extern int contct_nat;
 extern int contct_tot;
-extern double end2endsq;
-extern double rgsq;
-extern double kinT;
+extern float end2endsq;
+extern float rgsq;
+extern float kinT;
 
-extern double sigma_ss;
-extern double sigma_ss6;
-extern double epsilon_ss;
-extern double e_bnd,e_ang,e_tor,e_stack,e_elec,e_ang_ss;
-extern double e_vdw_rr,e_vdw_rr_att,e_vdw_rr_rep;
-extern double rna_etot,system_etot;
+extern float sigma_ss;
+extern float sigma_ss6;
+extern float epsilon_ss;
+extern float e_bnd,e_ang,e_tor,e_stack,e_elec,e_ang_ss;
+extern float e_vdw_rr,e_vdw_rr_att,e_vdw_rr_rep;
+extern float rna_etot,system_etot;
 
 // Increment
-extern double3 *incr;
+extern float3 *incr;
 
 
 // native info
@@ -258,8 +258,8 @@ extern int* rna_phosphate;
 extern int rna_phosphate_allocated;
 
 // conversion factors;
-const double kcalpmol2K = 503.15;
+const float kcalpmol2K = 503.15;
 
-double rnd(double);
+float rnd(float);
 
 #endif /* GLOBAL_H */

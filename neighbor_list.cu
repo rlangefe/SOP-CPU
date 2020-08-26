@@ -48,37 +48,37 @@ inline void __cudaCheckError( const char *file, const int line )
     return;
 }
 
-__device__ __constant__ double dev_coeff_att[3][3] = {
+__device__ __constant__ float dev_coeff_att[3][3] = {
     {0.0, 0.0, 0.0},
 	{0.0, 0.7, 0.8},
 	{0.0, 0.8, 1.0}
 };
 
-__device__ __constant__ double dev_coeff_rep[3][3] = {
+__device__ __constant__ float dev_coeff_rep[3][3] = {
     {0.0, 0.0, 0.0},
 	{0.0, 1.0, 1.0},
 	{0.0, 1.0, 1.0}
 };
 
-__device__ __constant__ double dev_force_coeff_att[3][3] = {
+__device__ __constant__ float dev_force_coeff_att[3][3] = {
     {0.0,       0.0,       0.0},
 	{0.0, -12.0*1.0, -12.0*0.8},
 	{0.0, -12.0*0.8, -12.0*0.7}
 };
 
-__device__ __constant__ double dev_force_coeff_rep[3][3] = {
+__device__ __constant__ float dev_force_coeff_rep[3][3] = {
     {0.0,       0.0,       0.0},
 	{0.0,  -6.0*1.0,  -6.0*1.0},
 	{0.0,  -6.0*1.0,  -6.0*1.0}
 };
 
-__device__ __constant__ double dev_sigma_rep[3][3] = {
+__device__ __constant__ float dev_sigma_rep[3][3] = {
     {0.0, 0.0, 0.0},
 	{0.0, 3.8, 5.4},
 	{0.0, 5.4, 7.0}
 };
 
-__device__ __constant__ double dev_rcut_nat[3][3] = {
+__device__ __constant__ float dev_rcut_nat[3][3] = {
     { 0.0,  0.0,  0.0},
     { 0.0,  8.0, 11.0},
     { 0.0, 11.0, 14.0}
@@ -111,13 +111,13 @@ void compact_native_CL(){
 
     // typedef these iterators for shorthand
     typedef thrust::device_vector<int>::iterator   IntIterator;
-    typedef thrust::device_vector<double>::iterator DoubleIterator;
+    typedef thrust::device_vector<float>::iterator floatIterator;
 
     // typedef a tuple of these iterators
-    typedef thrust::tuple<IntIterator, IntIterator, IntIterator, IntIterator, DoubleIterator, DoubleIterator, DoubleIterator, DoubleIterator> IteratorTuple;
-    //typedef thrust::tuple<int *, int *, int *, int *, double *, double *, double *, double *> HostIteratorTuple;
+    typedef thrust::tuple<IntIterator, IntIterator, IntIterator, IntIterator, floatIterator, floatIterator, floatIterator, floatIterator> IteratorTuple;
+    //typedef thrust::tuple<int *, int *, int *, int *, float *, float *, float *, float *> HostIteratorTuple;
     typedef thrust::tuple<thrust::device_ptr<int>, thrust::device_ptr<int>, thrust::device_ptr<int>, thrust::device_ptr<int>,
-                        thrust::device_ptr<double>, thrust::device_ptr<double>, thrust::device_ptr<double>, thrust::device_ptr<double>> HostIteratorTuple;
+                        thrust::device_ptr<float>, thrust::device_ptr<float>, thrust::device_ptr<float>, thrust::device_ptr<float>> HostIteratorTuple;
 
     // typedef the zip_iterator of this tuple
     typedef thrust::zip_iterator<IteratorTuple> ZipIterator;
@@ -128,10 +128,10 @@ void compact_native_CL(){
     thrust::device_vector<int> dev_jbead_lj_nat_vec(dev_jbead_lj_nat, dev_jbead_lj_nat+N);
     thrust::device_vector<int> dev_itype_lj_nat_vec(dev_itype_lj_nat, dev_itype_lj_nat+N);
     thrust::device_vector<int> dev_jtype_lj_nat_vec(dev_jtype_lj_nat, dev_jtype_lj_nat+N);
-    thrust::device_vector<double> dev_lj_nat_pdb_dist_vec(dev_lj_nat_pdb_dist, dev_lj_nat_pdb_dist+N);
-    thrust::device_vector<double> dev_lj_nat_pdb_dist2_vec(dev_lj_nat_pdb_dist2, dev_lj_nat_pdb_dist2+N);
-    thrust::device_vector<double> dev_lj_nat_pdb_dist6_vec(dev_lj_nat_pdb_dist6, dev_lj_nat_pdb_dist6+N);
-    thrust::device_vector<double> dev_lj_nat_pdb_dist12_vec(dev_lj_nat_pdb_dist12, dev_lj_nat_pdb_dist12+N);
+    thrust::device_vector<float> dev_lj_nat_pdb_dist_vec(dev_lj_nat_pdb_dist, dev_lj_nat_pdb_dist+N);
+    thrust::device_vector<float> dev_lj_nat_pdb_dist2_vec(dev_lj_nat_pdb_dist2, dev_lj_nat_pdb_dist2+N);
+    thrust::device_vector<float> dev_lj_nat_pdb_dist6_vec(dev_lj_nat_pdb_dist6, dev_lj_nat_pdb_dist6+N);
+    thrust::device_vector<float> dev_lj_nat_pdb_dist12_vec(dev_lj_nat_pdb_dist12, dev_lj_nat_pdb_dist12+N);
 
     // Create device value vector
     thrust::device_vector<int> dev_value_vec(dev_value_int, dev_value_int+N);
@@ -141,10 +141,10 @@ void compact_native_CL(){
     thrust::device_vector<int> dev_jbead_neighbor_list_att_vec(N);
     thrust::device_vector<int> dev_itype_neighbor_list_att_vec(N);
     thrust::device_vector<int> dev_jtype_neighbor_list_att_vec(N);
-    thrust::device_vector<double> dev_nl_lj_nat_pdb_dist_vec(N);
-    thrust::device_vector<double> dev_nl_lj_nat_pdb_dist2_vec(N);
-    thrust::device_vector<double> dev_nl_lj_nat_pdb_dist6_vec(N);
-    thrust::device_vector<double> dev_nl_lj_nat_pdb_dist12_vec(N);
+    thrust::device_vector<float> dev_nl_lj_nat_pdb_dist_vec(N);
+    thrust::device_vector<float> dev_nl_lj_nat_pdb_dist2_vec(N);
+    thrust::device_vector<float> dev_nl_lj_nat_pdb_dist6_vec(N);
+    thrust::device_vector<float> dev_nl_lj_nat_pdb_dist12_vec(N);
 
     ZipIterator dev_initial_begin(thrust::make_tuple(dev_ibead_lj_nat_vec.begin(), dev_jbead_lj_nat_vec.begin(), dev_itype_lj_nat_vec.begin(), dev_jtype_lj_nat_vec.begin(),
                                             dev_lj_nat_pdb_dist_vec.begin(), dev_lj_nat_pdb_dist2_vec.begin(), dev_lj_nat_pdb_dist6_vec.begin(), dev_lj_nat_pdb_dist12_vec.begin()));
@@ -192,7 +192,7 @@ void compact_non_native_CL(){
 
     // typedef these iterators for shorthand
     typedef thrust::device_vector<int>::iterator   IntIterator;
-    typedef thrust::device_vector<double>::iterator DoubleIterator;
+    typedef thrust::device_vector<float>::iterator floatIterator;
 
     // typedef a tuple of these iterators
     typedef thrust::tuple<IntIterator, IntIterator, IntIterator, IntIterator> IteratorTuple;
@@ -251,10 +251,10 @@ void compact_non_native_CL(){
 void update_neighbor_list() {
   device_to_host(0);
 
-  double dx, dy, dz;
-  double d2;
+  float dx, dy, dz;
+  float d2;
   int ibead, jbead, itype, jtype;
-  double rcut, rcut2;
+  float rcut, rcut2;
 
   nnl_att = 0;
   nnl_rep = 0;
@@ -398,13 +398,13 @@ void compact_native_thrust(){
 
     // typedef these iterators for shorthand
     typedef thrust::device_vector<int>::iterator   IntIterator;
-    typedef thrust::device_vector<double>::iterator DoubleIterator;
+    typedef thrust::device_vector<float>::iterator floatIterator;
 
     // typedef a tuple of these iterators
-    typedef thrust::tuple<IntIterator, IntIterator, IntIterator, IntIterator, DoubleIterator, DoubleIterator, DoubleIterator, DoubleIterator> IteratorTuple;
-    //typedef thrust::tuple<int *, int *, int *, int *, double *, double *, double *, double *> HostIteratorTuple;
+    typedef thrust::tuple<IntIterator, IntIterator, IntIterator, IntIterator, floatIterator, floatIterator, floatIterator, floatIterator> IteratorTuple;
+    //typedef thrust::tuple<int *, int *, int *, int *, float *, float *, float *, float *> HostIteratorTuple;
     typedef thrust::tuple<thrust::device_ptr<int>, thrust::device_ptr<int>, thrust::device_ptr<int>, thrust::device_ptr<int>,
-                        thrust::device_ptr<double>, thrust::device_ptr<double>, thrust::device_ptr<double>, thrust::device_ptr<double>> HostIteratorTuple;
+                        thrust::device_ptr<float>, thrust::device_ptr<float>, thrust::device_ptr<float>, thrust::device_ptr<float>> HostIteratorTuple;
 
     // typedef the zip_iterator of this tuple
     typedef thrust::zip_iterator<IteratorTuple> ZipIterator;
@@ -415,10 +415,10 @@ void compact_native_thrust(){
     thrust::device_vector<int> dev_jbead_lj_nat_vec(dev_jbead_lj_nat, dev_jbead_lj_nat+N);
     thrust::device_vector<int> dev_itype_lj_nat_vec(dev_itype_lj_nat, dev_itype_lj_nat+N);
     thrust::device_vector<int> dev_jtype_lj_nat_vec(dev_jtype_lj_nat, dev_jtype_lj_nat+N);
-    thrust::device_vector<double> dev_lj_nat_pdb_dist_vec(dev_lj_nat_pdb_dist, dev_lj_nat_pdb_dist+N);
-    thrust::device_vector<double> dev_lj_nat_pdb_dist2_vec(dev_lj_nat_pdb_dist2, dev_lj_nat_pdb_dist2+N);
-    thrust::device_vector<double> dev_lj_nat_pdb_dist6_vec(dev_lj_nat_pdb_dist6, dev_lj_nat_pdb_dist6+N);
-    thrust::device_vector<double> dev_lj_nat_pdb_dist12_vec(dev_lj_nat_pdb_dist12, dev_lj_nat_pdb_dist12+N);
+    thrust::device_vector<float> dev_lj_nat_pdb_dist_vec(dev_lj_nat_pdb_dist, dev_lj_nat_pdb_dist+N);
+    thrust::device_vector<float> dev_lj_nat_pdb_dist2_vec(dev_lj_nat_pdb_dist2, dev_lj_nat_pdb_dist2+N);
+    thrust::device_vector<float> dev_lj_nat_pdb_dist6_vec(dev_lj_nat_pdb_dist6, dev_lj_nat_pdb_dist6+N);
+    thrust::device_vector<float> dev_lj_nat_pdb_dist12_vec(dev_lj_nat_pdb_dist12, dev_lj_nat_pdb_dist12+N);
 
     // Create device value vector
     thrust::device_vector<int> dev_value_vec(dev_value_int, dev_value_int+N);
@@ -428,10 +428,10 @@ void compact_native_thrust(){
     thrust::device_vector<int> dev_jbead_neighbor_list_att_vec(N);
     thrust::device_vector<int> dev_itype_neighbor_list_att_vec(N);
     thrust::device_vector<int> dev_jtype_neighbor_list_att_vec(N);
-    thrust::device_vector<double> dev_nl_lj_nat_pdb_dist_vec(N);
-    thrust::device_vector<double> dev_nl_lj_nat_pdb_dist2_vec(N);
-    thrust::device_vector<double> dev_nl_lj_nat_pdb_dist6_vec(N);
-    thrust::device_vector<double> dev_nl_lj_nat_pdb_dist12_vec(N);
+    thrust::device_vector<float> dev_nl_lj_nat_pdb_dist_vec(N);
+    thrust::device_vector<float> dev_nl_lj_nat_pdb_dist2_vec(N);
+    thrust::device_vector<float> dev_nl_lj_nat_pdb_dist6_vec(N);
+    thrust::device_vector<float> dev_nl_lj_nat_pdb_dist12_vec(N);
 
     ZipIterator dev_initial_begin(thrust::make_tuple(dev_ibead_lj_nat_vec.begin(), dev_jbead_lj_nat_vec.begin(), dev_itype_lj_nat_vec.begin(), dev_jtype_lj_nat_vec.begin(),
                                             dev_lj_nat_pdb_dist_vec.begin(), dev_lj_nat_pdb_dist2_vec.begin(), dev_lj_nat_pdb_dist6_vec.begin(), dev_lj_nat_pdb_dist12_vec.begin()));
@@ -472,7 +472,7 @@ void compact_non_native_thrust(){
 
     // typedef these iterators for shorthand
     typedef thrust::device_vector<int>::iterator   IntIterator;
-    typedef thrust::device_vector<double>::iterator DoubleIterator;
+    typedef thrust::device_vector<float>::iterator floatIterator;
 
     // typedef a tuple of these iterators
     typedef thrust::tuple<IntIterator, IntIterator, IntIterator, IntIterator> IteratorTuple;
@@ -576,8 +576,8 @@ void calculate_array_native(int boxl, int N){
 							
 	// Calculate array sizes
 	int size_int = N*sizeof(int);
-	int size_double = N*sizeof(double);
-	int size_double3 = (nbead+1)*sizeof(double3);
+	int size_float = N*sizeof(float);
+	int size_float3 = (nbead+1)*sizeof(float3);
 	
 	// Calculate block/thread count
 	int threads = (int)min(N, SECTION_SIZE);
@@ -590,14 +590,14 @@ void calculate_array_native(int boxl, int N){
     cudaDeviceSynchronize();
 }
 
-__global__ void array_native_kernel(int *dev_ibead_lj_nat, int *dev_jbead_lj_nat, int *dev_itype_lj_nat, int *dev_jtype_lj_nat, double3 *dev_unc_pos, double *dev_lj_nat_pdb_dist, 
+__global__ void array_native_kernel(int *dev_ibead_lj_nat, int *dev_jbead_lj_nat, int *dev_itype_lj_nat, int *dev_jtype_lj_nat, float3 *dev_unc_pos, float *dev_lj_nat_pdb_dist, 
                             int *dev_value, int boxl, int N){
   int i = blockIdx.x * blockDim.x + threadIdx.x;
   if(i > 0 && i < N){
-    double dx, dy, dz;
-    double d2;
+    float dx, dy, dz;
+    float d2;
     int ibead, jbead, itype, jtype;
-    double rcut, rcut2;
+    float rcut, rcut2;
 
     // record sigma for ibead and jbead
     ibead = dev_ibead_lj_nat[i];
@@ -618,7 +618,7 @@ __global__ void array_native_kernel(int *dev_ibead_lj_nat, int *dev_jbead_lj_nat
 
     // apply periodic boundary conditions to dx, dy, and dz
     //dx -= boxl*rnd(dx/boxl);
-    double rnd_value;
+    float rnd_value;
 
     rnd_value = ( ((dx/boxl)>0) ? std::floor((dx/boxl)+0.5) : std::ceil((dx/boxl)-0.5) );
     dx -= boxl*rnd_value;
@@ -658,8 +658,8 @@ void calculate_array_non_native(int boxl, int N){
 							
 	// Calculate array sizes
 	int size_int = N*sizeof(int);
-	int size_double = N*sizeof(double);
-	int size_double3 = (nbead+1)*sizeof(double3);
+	int size_float = N*sizeof(float);
+	int size_float3 = (nbead+1)*sizeof(float3);
 	
 	// Calculate block/thread count
 	int threads = (int)min(N, SECTION_SIZE);
@@ -673,13 +673,13 @@ void calculate_array_non_native(int boxl, int N){
 }
 
 __global__ void array_non_native_kernel(int *dev_ibead_lj_non_nat, int *dev_jbead_lj_non_nat, int *dev_itype_lj_non_nat, int *dev_jtype_lj_non_nat, 
-                                        double3 *dev_unc_pos, int *dev_value, int boxl, int N){
+                                        float3 *dev_unc_pos, int *dev_value, int boxl, int N){
   int i = blockIdx.x * blockDim.x + threadIdx.x;
   if(i > 0 && i < N){
-    double dx, dy, dz;
-    double d2;
+    float dx, dy, dz;
+    float d2;
     int ibead, jbead, itype, jtype;
-    double rcut, rcut2;
+    float rcut, rcut2;
     
     // record sigma for ibead and jbead
     ibead = dev_ibead_lj_non_nat[i];
@@ -696,7 +696,7 @@ __global__ void array_non_native_kernel(int *dev_ibead_lj_non_nat, int *dev_jbea
 
     // apply periodic boundary conditions to dx, dy, and dz
     //dx -= boxl*rnd(dx/boxl);
-    double rnd_value;
+    float rnd_value;
 
     rnd_value = ( ((dx/boxl)>0) ? std::floor((dx/boxl)+0.5) : std::ceil((dx/boxl)-0.5) );
     dx -= boxl*rnd_value;
@@ -921,7 +921,7 @@ void allocate_and_copy(T *dev_index, int *dev_value, int *dev_output, int N, int
  *  dev_result: pointer where compacted array is stored (on GPU)
  */
 
-__global__ void copyElements(double *dev_index, int *dev_value, int *dev_output, double *dev_result, int N){
+__global__ void copyElements(float *dev_index, int *dev_value, int *dev_output, float *dev_result, int N){
     int i = blockIdx.x * blockDim.x + threadIdx.x;
     if(dev_value[i] && i < N){
         dev_result[dev_output[i]-1] = dev_index[i];
@@ -970,13 +970,13 @@ int compact_native(int N){
 
     allocate_and_copy<int>(dev_jtype_lj_nat, dev_value_int, dev_output_int, N, arrSize, dev_jtype_neighbor_list_att);
 
-    allocate_and_copy<double>(dev_lj_nat_pdb_dist, dev_value_int, dev_output_int, N, arrSize, dev_nl_lj_nat_pdb_dist);
+    allocate_and_copy<float>(dev_lj_nat_pdb_dist, dev_value_int, dev_output_int, N, arrSize, dev_nl_lj_nat_pdb_dist);
 
-    allocate_and_copy<double>(dev_lj_nat_pdb_dist2, dev_value_int, dev_output_int, N, arrSize, dev_nl_lj_nat_pdb_dist2);
+    allocate_and_copy<float>(dev_lj_nat_pdb_dist2, dev_value_int, dev_output_int, N, arrSize, dev_nl_lj_nat_pdb_dist2);
 
-    allocate_and_copy<double>(dev_lj_nat_pdb_dist6, dev_value_int, dev_output_int, N, arrSize, dev_nl_lj_nat_pdb_dist6);
+    allocate_and_copy<float>(dev_lj_nat_pdb_dist6, dev_value_int, dev_output_int, N, arrSize, dev_nl_lj_nat_pdb_dist6);
 
-    allocate_and_copy<double>(dev_lj_nat_pdb_dist12, dev_value_int, dev_output_int, N, arrSize, dev_nl_lj_nat_pdb_dist12);
+    allocate_and_copy<float>(dev_lj_nat_pdb_dist12, dev_value_int, dev_output_int, N, arrSize, dev_nl_lj_nat_pdb_dist12);
 
     return arrSize;
 }

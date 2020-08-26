@@ -15,18 +15,18 @@ coord::~coord() {
 int debug = 0;
 
 // Benchmarking
-double nl_time = 0.0;
-double pl_time = 0.0;
-double vdw_energy_time = 0.0;
-double vdw_forces_time = 0.0;
-double fene_energy_time = 0.0;
-double fene_forces_time = 0.0;
-double ss_ang_energy_time = 0.0;
-double ss_ang_forces_time = 0.0;
-double update_pos_time = 0.0;
-double update_vel_time = 0.0;
-double clear_forces_time = 0.0;
-double rng_time = 0.0;
+float nl_time = 0.0;
+float pl_time = 0.0;
+float vdw_energy_time = 0.0;
+float vdw_forces_time = 0.0;
+float fene_energy_time = 0.0;
+float fene_forces_time = 0.0;
+float ss_ang_energy_time = 0.0;
+float ss_ang_forces_time = 0.0;
+float update_pos_time = 0.0;
+float update_vel_time = 0.0;
+float clear_forces_time = 0.0;
+float rng_time = 0.0;
 
 int ncmd;
 char cmd[mcmd+1][mwdsize];
@@ -38,27 +38,27 @@ char pl_algorithm[30];
 int prec = 0;
 
 // bonded info
-double k_bnd; // bond spring constant
+float k_bnd; // bond spring constant
 int nbnd; // number of bonds
 int* ibead_bnd;
 int* jbead_bnd;
-double* pdb_dist; // pdb bond distances
+float* pdb_dist; // pdb bond distances
 int bnds_allocated = 0;
-double R0;
-double R0sq;
-double e_bnd_coeff;
+float R0;
+float R0sq;
+float e_bnd_coeff;
 
 // angular info
-double k_ang;
+float k_ang;
 int nang;
 int* ibead_ang;
 int* jbead_ang;
 int* kbead_ang;
-double* pdb_ang;
+float* pdb_ang;
 int angs_allocated = 0;
-double e_ang_coeff;
-double e_ang_ss_coeff;
-double f_ang_ss_coeff;
+float e_ang_coeff;
+float e_ang_ss_coeff;
+float f_ang_ss_coeff;
 
 // rna-rna vdw
 
@@ -74,37 +74,37 @@ int nil_att;
 int nil_rep;
 
 
-double coeff_att[3][3] = { {0.0, 0.0, 0.0},
+float coeff_att[3][3] = { {0.0, 0.0, 0.0},
 			   {0.0, 0.7, 0.8},
 			   {0.0, 0.8, 1.0} };
 
-double coeff_rep[3][3] = { {0.0, 0.0, 0.0},
+float coeff_rep[3][3] = { {0.0, 0.0, 0.0},
 			   {0.0, 1.0, 1.0},
 			   {0.0, 1.0, 1.0} };
 
-double force_coeff_att[3][3] = { {0.0,       0.0,       0.0},
+float force_coeff_att[3][3] = { {0.0,       0.0,       0.0},
 				 {0.0, -12.0*1.0, -12.0*0.8},
 				 {0.0, -12.0*0.8, -12.0*0.7} };
 
-double force_coeff_rep[3][3] = { {0.0,       0.0,       0.0},
+float force_coeff_rep[3][3] = { {0.0,       0.0,       0.0},
 				 {0.0,  -6.0*1.0,  -6.0*1.0},
 				 {0.0,  -6.0*1.0,  -6.0*1.0} };
 
-double sigma_rep[3][3] = { {0.0, 0.0, 0.0},
+float sigma_rep[3][3] = { {0.0, 0.0, 0.0},
 			   {0.0, 3.8, 5.4},
 			   {0.0, 5.4, 7.0} };
 
-double sigma_rep2[3][3];
-double sigma_rep6[3][3];
-double sigma_rep12[3][3];
+float sigma_rep2[3][3];
+float sigma_rep6[3][3];
+float sigma_rep12[3][3];
 
-//double sigma_rep;
-//double sigma_rep2;
-double sigma_ss; // for angular soft-sphere repulsion
-double sigma_ss6; // for angular soft-sphere repulsion
-double epsilon_ss; // for angular soft-sphere repulsion
-//double force_coeff_rep;
-double rcut_nat[3][3] = { { 0.0,  0.0,  0.0},
+//float sigma_rep;
+//float sigma_rep2;
+float sigma_ss; // for angular soft-sphere repulsion
+float sigma_ss6; // for angular soft-sphere repulsion
+float epsilon_ss; // for angular soft-sphere repulsion
+//float force_coeff_rep;
+float rcut_nat[3][3] = { { 0.0,  0.0,  0.0},
                           { 0.0,  8.0, 11.0},
                           { 0.0, 11.0, 14.0} };
 int* ibead_lj_nat;
@@ -112,10 +112,10 @@ int* jbead_lj_nat;
 int* itype_lj_nat;
 int* jtype_lj_nat;
 
-double* lj_nat_pdb_dist;
-double* lj_nat_pdb_dist2;
-double* lj_nat_pdb_dist6;
-double* lj_nat_pdb_dist12;
+float* lj_nat_pdb_dist;
+float* lj_nat_pdb_dist2;
+float* lj_nat_pdb_dist6;
+float* lj_nat_pdb_dist12;
 
 int* ibead_lj_non_nat;
 int* jbead_lj_non_nat;
@@ -128,10 +128,10 @@ int* jbead_neighbor_list_att;
 int* itype_neighbor_list_att;
 int* jtype_neighbor_list_att;
 
-double* nl_lj_nat_pdb_dist;
-double* nl_lj_nat_pdb_dist2;
-double* nl_lj_nat_pdb_dist6;
-double* nl_lj_nat_pdb_dist12;
+float* nl_lj_nat_pdb_dist;
+float* nl_lj_nat_pdb_dist2;
+float* nl_lj_nat_pdb_dist6;
+float* nl_lj_nat_pdb_dist12;
 
 int* ibead_neighbor_list_rep;
 int* jbead_neighbor_list_rep;
@@ -144,10 +144,10 @@ int* jbead_pair_list_att;
 int* itype_pair_list_att;
 int* jtype_pair_list_att;
 
-double* pl_lj_nat_pdb_dist;
-double* pl_lj_nat_pdb_dist2;
-double* pl_lj_nat_pdb_dist6;
-double* pl_lj_nat_pdb_dist12;
+float* pl_lj_nat_pdb_dist;
+float* pl_lj_nat_pdb_dist2;
+float* pl_lj_nat_pdb_dist6;
+float* pl_lj_nat_pdb_dist12;
 
 int* ibead_pair_list_rep;
 int* jbead_pair_list_rep;
@@ -159,10 +159,10 @@ int lj_rna_rna_allocated = 0;
 // coordinates and associated params
 
 int nbead;
-double3* pos;
-double3* unc_pos; // uncorrected positions
-double3* vel;
-double3* force;
+float3* pos;
+float3* unc_pos; // uncorrected positions
+float3* vel;
+float3* force;
 int pos_allocated = 0;
 int vel_allocated = 0;
 int force_allocated = 0;
@@ -182,7 +182,7 @@ int run;
 int restart = 0; // default is to start a new simulation
 int rgen_restart = 0; // default don't restart random number generator
 int sim_type = 1; // integration scheme; default is underdamped
-double T; // temperature
+float T; // temperature
 int usegpu_nl = 0;
 int usegpu_pl = 0;
 int usegpu_vdw_energy = 0;
@@ -197,22 +197,22 @@ int usegpu_rand_force = 0;
 int usegpu_clear_force = 0;
 int neighborlist = 0; // neighbor list cutoff method?
 int celllist = 0; // cell list cutoff method?
-double boxl; // Length of an edge of the simulation box
-double ncell;
-double lcell;
-double zeta; // friction coefficient
-double nstep; // number of steps to take
-double istep_restart = 0.0;
+float boxl; // Length of an edge of the simulation box
+float ncell;
+float lcell;
+float zeta; // friction coefficient
+float nstep; // number of steps to take
+float istep_restart = 0.0;
 int nup;
 int inlup;
 int nnlup;
-double h; // time step
-double halfh;
-double a1; // a1,a2,a3,a4,a5 are used for integration
-double a2;
-double a3;
-double a4;
-double a5;
+float h; // time step
+float halfh;
+float a1; // a1,a2,a3,a4,a5 are used for integration
+float a2;
+float a3;
+float a4;
+float a5;
 char ufname[mwdsize+1];
 char rcfname[mwdsize+1];
 char cfname[mwdsize+1];
@@ -222,7 +222,7 @@ char binfname[mwdsize+1];
 char uncbinfname[mwdsize+1];
 char iccnfigfname[mwdsize+1];
 int binsave = 1; // default will save trajectory
-const double pi = acos(-1);
+const float pi = acos(-1);
 
 // force and pot stuff
 
@@ -238,21 +238,21 @@ pot_term_Ptr pot_term[mpot_term+1];
 
 //observables
 
-double e_bnd,e_ang,e_tor,e_stack,e_elec,e_ang_ss;
-double e_vdw_rr,e_vdw_rr_att,e_vdw_rr_rep;
-double rna_etot,system_etot;
-double chi;
-double Q;
+float e_bnd,e_ang,e_tor,e_stack,e_elec,e_ang_ss;
+float e_vdw_rr,e_vdw_rr_att,e_vdw_rr_rep;
+float rna_etot,system_etot;
+float chi;
+float Q;
 int contct_nat;
 int contct_tot;
-double end2endsq;
-double rgsq;
-double kinT;
+float end2endsq;
+float rgsq;
+float kinT;
 
 // Increment
-double3 *incr;
+float3 *incr;
 
-double rnd(double x)
+float rnd(float x)
 {
   using namespace std;
   return ( (x>0) ? floor(x+0.5) : ceil(x-0.5) );

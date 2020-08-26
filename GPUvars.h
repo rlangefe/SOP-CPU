@@ -6,9 +6,9 @@
 #include <curand_kernel.h>
 
 // General
-extern double3 *dev_unc_pos;
-extern double *dev_value_double;
-extern double *dev_output_double;
+extern float3 *dev_unc_pos;
+extern float *dev_value_float;
+extern float *dev_output_float;
 extern int *dev_value_int;
 extern int *dev_output_int;
 
@@ -18,10 +18,10 @@ extern int *dev_ibead_lj_nat;
 extern int *dev_jbead_lj_nat;
 extern int *dev_itype_lj_nat;
 extern int *dev_jtype_lj_nat;
-extern double *dev_lj_nat_pdb_dist;
-extern double *dev_lj_nat_pdb_dist2;
-extern double *dev_lj_nat_pdb_dist6;
-extern double *dev_lj_nat_pdb_dist12;
+extern float *dev_lj_nat_pdb_dist;
+extern float *dev_lj_nat_pdb_dist2;
+extern float *dev_lj_nat_pdb_dist6;
+extern float *dev_lj_nat_pdb_dist12;
 
 // Non-Native
 extern int *dev_ibead_lj_non_nat;	
@@ -35,10 +35,10 @@ extern int *dev_ibead_neighbor_list_att;
 extern int *dev_jbead_neighbor_list_att;
 extern int *dev_itype_neighbor_list_att;
 extern int *dev_jtype_neighbor_list_att;
-extern double *dev_nl_lj_nat_pdb_dist;
-extern double *dev_nl_lj_nat_pdb_dist2;
-extern double *dev_nl_lj_nat_pdb_dist6;
-extern double *dev_nl_lj_nat_pdb_dist12;
+extern float *dev_nl_lj_nat_pdb_dist;
+extern float *dev_nl_lj_nat_pdb_dist2;
+extern float *dev_nl_lj_nat_pdb_dist6;
+extern float *dev_nl_lj_nat_pdb_dist12;
 
 // Non-Native
 extern int *dev_ibead_neighbor_list_rep;	
@@ -53,10 +53,10 @@ extern int *dev_ibead_pair_list_att;
 extern int *dev_jbead_pair_list_att;
 extern int *dev_itype_pair_list_att;
 extern int *dev_jtype_pair_list_att;
-extern double *dev_pl_lj_nat_pdb_dist;
-extern double *dev_pl_lj_nat_pdb_dist2;
-extern double *dev_pl_lj_nat_pdb_dist6;
-extern double *dev_pl_lj_nat_pdb_dist12;
+extern float *dev_pl_lj_nat_pdb_dist;
+extern float *dev_pl_lj_nat_pdb_dist2;
+extern float *dev_pl_lj_nat_pdb_dist6;
+extern float *dev_pl_lj_nat_pdb_dist12;
 
 // Non-Native
 extern int *dev_ibead_pair_list_rep;	
@@ -67,22 +67,22 @@ extern int *dev_jtype_pair_list_rep;
 // Fene Energy
 extern int *dev_ibead_bnd;
 extern int *dev_jbead_bnd;
-extern double *dev_pdb_dist;
+extern float *dev_pdb_dist;
 
 // Soft Sphere Angular Energy
 extern int *dev_ibead_ang;
 extern int *dev_kbead_ang;
 
-extern double3 *dev_force;
+extern float3 *dev_force;
 
 // Position
-extern double3 *dev_pos;
+extern float3 *dev_pos;
 
 // Velocity
-extern double3 *dev_vel;
+extern float3 *dev_vel;
 
 // Position and Velocity
-extern double3 *dev_incr;
+extern float3 *dev_incr;
 
 // cuRand
 extern curandState *devStates;

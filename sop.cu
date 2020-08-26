@@ -176,13 +176,13 @@ void underdamped_ctrl()
   using namespace std;
 
   char oline[2048];
-  double istep = 1.0;
+  float istep = 1.0;
   int iup = 1;
   int inlup = 1;
   ofstream out(ufname,ios::out|ios::app);
   static int first_time = 1;
 
-  //double3* incr = new double3[nbead+1];
+  //float3* incr = new float3[nbead+1];
 
   if( (!restart)&&first_time ) { // zero out the velocities and forces
     for( int i=1; i<=nbead; i++ ) {
@@ -279,7 +279,7 @@ void underdamped_ctrl()
   return;
 }
 
-void calculate_observables(double3* increment)
+void calculate_observables(float3* increment)
 {
 
   using namespace std;
@@ -287,10 +287,10 @@ void calculate_observables(double3* increment)
   host_collect();
 
   char oline[1024];
-  double dx,dy,dz,d;
-  static const double tol = 1.0; // tolerance for chi distances
-  static const double chinorm = (double(nbead*nbead)-5.0*double(nbead)+6.0)/2.0;
-  double sumvsq;
+  float dx,dy,dz,d;
+  static const float tol = 1.0; // tolerance for chi distances
+  static const float chinorm = (float(nbead*nbead)-5.0*float(nbead)+6.0)/2.0;
+  float sumvsq;
   int nchi;
   int ibead, jbead;
   int itype, jtype;
@@ -320,7 +320,7 @@ void calculate_observables(double3* increment)
       contct_nat++;
     }
   }
-  Q = double(contct_nat)/ncon_att;
+  Q = float(contct_nat)/ncon_att;
 
 
   // rgsq
@@ -338,7 +338,7 @@ void calculate_observables(double3* increment)
       rgsq += (dx*dx+dy*dy+dz*dz);
     }
   }
-  rgsq /= double(nbead*nbead);
+  rgsq /= float(nbead*nbead);
 
   // kinT
 
@@ -352,7 +352,7 @@ void calculate_observables(double3* increment)
       printf("nbead: %d\tsumvsq: %f\n", nbead, sumvsq);
       fflush(stdout);
     }
-    kinT = sumvsq/(3.0*double(nbead));
+    kinT = sumvsq/(3.0*float(nbead));
   } else if( sim_type == 2 ) {
     sumvsq = 0.0;
     for( int i=1; i<=nbead; i++ ) {
@@ -361,7 +361,7 @@ void calculate_observables(double3* increment)
 	    increment[i].z*increment[i].z;
     }
     sumvsq *= zeta/(2.0*h);
-    kinT = sumvsq/(3.0*double(nbead));
+    kinT = sumvsq/(3.0*float(nbead));
   } else {
 
   }
@@ -390,7 +390,7 @@ void underdamped_update_pos(){
     unc_pos[i].z += incr[i].z;
   }
   clock_t ck1 = clock()-ck0;
-  update_pos_time+= ((double)ck1)/CLOCKS_PER_SEC;
+  update_pos_time+= ((float)ck1)/CLOCKS_PER_SEC;
 
 }
 
@@ -407,10 +407,10 @@ void underdamped_update_pos_gpu(){
 
   cudaDeviceSynchronize();
   clock_t ck1 = clock()-ck0;
-  update_pos_time+= ((double)ck1)/CLOCKS_PER_SEC;
+  update_pos_time+= ((float)ck1)/CLOCKS_PER_SEC;
 }
 
-__global__ void underdamped_update_pos_kernel(double3 *dev_vel, double3 *dev_force, double3 *dev_pos, double3 *dev_unc_pos, double3 *dev_incr, double a1, double a2, double boxl, int N){
+__global__ void underdamped_update_pos_kernel(float3 *dev_vel, float3 *dev_force, float3 *dev_pos, float3 *dev_unc_pos, float3 *dev_incr, float a1, float a2, float boxl, int N){
   int i = blockIdx.x * blockDim.x + threadIdx.x;
   if(i > 0 && i < N){
     dev_incr[i].x = a1*dev_vel[i].x + a2*dev_force[i].x;
@@ -423,7 +423,7 @@ __global__ void underdamped_update_pos_kernel(double3 *dev_vel, double3 *dev_for
     dev_pos[i].y += dev_incr[i].y;
     dev_pos[i].z += dev_incr[i].z;
 
-    double rnd_value;
+    float rnd_value;
 
     rnd_value = ( ((dev_pos[i].x/boxl)>0) ? std::floor((dev_pos[i].x/boxl)+0.5) : std::ceil((dev_pos[i].x/boxl)-0.5) );
     dev_pos[i].x  -= boxl*rnd_value;
@@ -449,7 +449,7 @@ void underdamped_update_vel(){
     vel[i].z = a3*incr[i].z + a4*force[i].z;
   }
   clock_t ck1 = clock()-ck0;
-  update_vel_time+= ((double)ck1)/CLOCKS_PER_SEC;
+  update_vel_time+= ((float)ck1)/CLOCKS_PER_SEC;
 }
 
 void underdamped_update_vel_gpu(){
@@ -465,10 +465,10 @@ void underdamped_update_vel_gpu(){
 
   cudaDeviceSynchronize();
   clock_t ck1 = clock()-ck0;
-  update_vel_time+= ((double)ck1)/CLOCKS_PER_SEC;
+  update_vel_time+= ((float)ck1)/CLOCKS_PER_SEC;
 }
 
-__global__ void underdamped_update_vel_kernel(double3 *dev_vel, double3 *dev_force, double3 *dev_incr, double a3, double a4, int N){
+__global__ void underdamped_update_vel_kernel(float3 *dev_vel, float3 *dev_force, float3 *dev_incr, float a3, float a4, int N){
   int i = blockIdx.x * blockDim.x + threadIdx.x;
   if(i > 0 && i < N){
     dev_vel[i].x = a3*dev_incr[i].x + a4*dev_force[i].x;
@@ -477,11 +477,11 @@ __global__ void underdamped_update_vel_kernel(double3 *dev_vel, double3 *dev_for
   }
 }
 
-void underdamped_iteration(double3* incr)
+void underdamped_iteration(float3* incr)
 {
   using namespace std;
 
-  static const double eps = 1.0e-5;
+  static const float eps = 1.0e-5;
 
   if(usegpu_pos){
     host_to_device(9);
@@ -508,7 +508,7 @@ void underdamped_iteration(double3* incr)
   }
 }
 
-void overdamped_iteration(double3* incr)
+void overdamped_iteration(float3* incr)
 {
    using namespace std;
 
@@ -550,12 +550,12 @@ void overdamped_ctrl()
   using namespace std;
 
   char oline[2048];
-  double istep = 1.0;
+  float istep = 1.0;
   int iup = 1;
   ofstream out(ufname,ios::out|ios::app);
   static int first_time = 1;
 
-  double3* incr = new double3[nbead+1];
+  float3* incr = new float3[nbead+1];
 
   if( (!restart)&&first_time ) { // zero out the velocities and forces
     for( int i=1; i<=nbead; i++ ) {
@@ -664,7 +664,7 @@ void run_pair_list_update(){
     }
   }
   clock_t ck1 = clock()-ck0;
-  pl_time+= ((double)ck1)/CLOCKS_PER_SEC;
+  pl_time+= ((float)ck1)/CLOCKS_PER_SEC;
 }
 
 void run_cell_list_update(){
@@ -691,5 +691,5 @@ void run_neighbor_list_update(){
     }
   }
   clock_t ck1 = clock()-ck0;
-  nl_time+= ((double)ck1)/CLOCKS_PER_SEC;
+  nl_time+= ((float)ck1)/CLOCKS_PER_SEC;
 }
