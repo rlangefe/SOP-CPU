@@ -243,8 +243,8 @@ if __name__ == '__main__':
 
     # proteins = pypdb.get_all()
 
-    #proteins = pypdb.Query('covid').search()
-    proteins = pypdb.Query('2MM4').search()
+    proteins = pypdb.Query('covid').search()
+    #proteins = pypdb.Query('2MM4').search()
     sample = proteins
     #sample_size = int(sys.argv[2])
 
