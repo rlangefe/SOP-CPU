@@ -202,12 +202,12 @@ def modify_pdb(pdb_file_contents):
         match_str = '(MODEL\s+' + str(best_model) + '\s+\n(ATOM\s+\d+\s+\w+\s+\w+\s+\w+\s+\d+\s+-?\d+\.\d+\s+-?\d+\.\d+\s+-?\d+\.\d+\s+-?\d+\.\d+\s+\d+\.\d+\s+\w+\s+\n)+TER\s+\d+\s+\w+\s+\w+\s+\d+\s+\nENDMDL)'
         match = re.search(match_str, pdb_file_contents)
         model = match.group(1)
-
+        '''
         match_str = '(HEADER(.+\n)+)MODEL\s+1'
         match = re.search(match_str, pdb_file_contents)
         header = match.group(1)
-
-        full_output = header + '\n' + model
+        '''
+        full_output = model
         return full_output
     else:
         match = re.search('REMARK \d+?\s*?BEST REPRESENTATIVE CONFORMER IN THIS ENSEMBLE\s*?:\s*?(NULL)', pdb_file_contents)
@@ -217,12 +217,12 @@ def modify_pdb(pdb_file_contents):
             match_str = '(MODEL\s+' + str(best_model) + '\s+\n(ATOM\s+\d+\s+\w+\s+\w+\s+\w+\s+\d+\s+-?\d+\.\d+\s+-?\d+\.\d+\s+-?\d+\.\d+\s+-?\d+\.\d+\s+\d+\.\d+\s+\w+\s+\n)+TER\s+\d+\s+\w+\s+\w+\s+\d+\s+\nENDMDL)'
             match = re.search(match_str, pdb_file_contents)
             model = match.group(1)
-
+            '''
             match_str = '(HEADER(.+\n)+)MODEL\s+1'
             match = re.search(match_str, pdb_file_contents)
             header = match.group(1)
-
-            full_output = header + '\n' + model
+            '''
+            full_output = model
             return full_output
         else:
             return pdb_file_contents
@@ -244,7 +244,7 @@ if __name__ == '__main__':
     # proteins = pypdb.get_all()
 
     #proteins = pypdb.Query('covid').search()
-    proteins = pypdb.Query('2MM4').search()
+    proteins = pypdb.Query('6YI3').search()
     sample = proteins
     #sample_size = int(sys.argv[2])
 
