@@ -196,7 +196,7 @@ run;
         
 
 def modify_pdb(pdb_file_contents):
-    match = re.search('REMARK \d+?  BEST REPRESENTATIVE CONFORMER IN THIS ENSEMBLE\s*?:\s*?(\d+)', pdb_file_contents)
+    match = re.search('REMARK \d+?\s*?BEST REPRESENTATIVE CONFORMER IN THIS ENSEMBLE\s*?:\s*?(\d+)', pdb_file_contents)
     if not match == None:
         best_model = int(match.group(1))
         
@@ -211,7 +211,7 @@ def modify_pdb(pdb_file_contents):
         full_output = header + '\n' + model
         return full_output
     else:
-        match = re.search('REMARK \d+?  BEST REPRESENTATIVE CONFORMER IN THIS ENSEMBLE\s*?:\s*?(NULL)', pdb_file_contents)
+        match = re.search('REMARK \d+?\s*?BEST REPRESENTATIVE CONFORMER IN THIS ENSEMBLE\s*?:\s*?(NULL)', pdb_file_contents)
         if not match == None:
             best_model = 1
         
@@ -244,8 +244,8 @@ if __name__ == '__main__':
 
     # proteins = pypdb.get_all()
 
-    #proteins = pypdb.Query('covid').search()
-    proteins = pypdb.Query('2MM4').search()
+    proteins = pypdb.Query('covid').search()
+    #proteins = pypdb.Query('2MM4').search()
     sample = proteins
     #sample_size = int(sys.argv[2])
 
